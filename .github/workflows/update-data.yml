@@ -1,0 +1,38 @@
+name: 📊 매크로 대시보드 데이터 업데이트
+
+on:
+  schedule:
+    # 매일 한국시간 07:00 (UTC 22:00 전날)
+    - cron: '0 22 * * *'
+  workflow_dispatch:  # 수동 실행 가능
+
+permissions:
+  contents: write
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install dependencies
+        run: pip install requests
+
+      - name: 📊 Fetch macro data
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: python fetch_data.py
+
+      - name: 📤 Commit & Push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git diff --staged --quiet || git commit -m "📊 데이터 업데이트 $(date +'%Y-%m-%d %H:%M KST' -d '+9 hours')"
+          git push
