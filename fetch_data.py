@@ -235,6 +235,7 @@ def fetch_rates():
         "kr": ("IRSTCI01KRM156N", "한국", "🇰🇷", "BOK"),
         "eu": ("ECBMRRFR", "유로존", "🇪🇺", "ECB"),    # ECB main refinancing rate
         "jp": ("IRSTCI01JPM156N", "일본", "🇯🇵", "BOJ"),
+        "cn": ("INTDSRCNM193N", "중국", "🇨🇳", "PBoC"),  # PBoC discount rate
     }
 
     all_dates = set()
@@ -286,6 +287,7 @@ def fetch_debt_gdp():
         "jp": ("GGGDTAJPA188N", "일본", "🇯🇵"),      # Japan govt debt/GDP annual
         "eu": ("GGGDTAEZA188N", "유로존", "🇪🇺"),     # Euro area
         "kr": ("GGGDTAKRA188N", "한국", "🇰🇷"),       # Korea
+        "cn": ("GGGDTACNA188N", "중국", "🇨🇳"),       # China
     }
 
     all_dates = set()
@@ -334,6 +336,7 @@ def fetch_pmi():
         "jp": ("JPNLOLITONOSTSAM", "일본", "🇯🇵"),
         "eu": ("EA19LOLITONOSTSAM", "유로존", "🇪🇺"),
         "kr": ("KORLOLITONOSTSAM", "한국", "🇰🇷"),
+        "cn": ("CHNLOLITONOSTSAM", "중국", "🇨🇳"),
     }
 
     all_dates = set()
