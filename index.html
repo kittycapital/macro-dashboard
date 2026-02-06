@@ -301,7 +301,7 @@ const DATA_BASE = './data/';
 const COLORS = {
   blue:'#4a9eff', cyan:'#00e5cc', red:'#ff4a6a', orange:'#ff8c42',
   yellow:'#ffd642', green:'#42ff8c', purple:'#a855f7',
-  us:'#4a9eff', kr:'#00e5cc', eu:'#ffd642', jp:'#ff8c42'
+  us:'#4a9eff', kr:'#00e5cc', eu:'#ffd642', jp:'#ff8c42', cn:'#ff4a6a'
 };
 
 Chart.defaults.font.family = "'JetBrains Mono','Noto Sans KR',monospace";
@@ -584,7 +584,7 @@ async function initRates() {
 
 function renderRates() {
   const d = ratesData;
-  const keys = ['us','kr','eu','jp'];
+  const keys = Object.keys(d.countries);
   document.getElementById('ratesStats').innerHTML = keys.map(k=>{
     const c = d.countries[k];
     const chgStr = c.prev_change > 0 ? `▲ +${(c.prev_change*100).toFixed(0)}bp` : c.prev_change < 0 ? `▼ ${(c.prev_change*100).toFixed(0)}bp` : '— 동결';
@@ -621,7 +621,7 @@ async function initDebt() {
 
 function renderDebt() {
   const d = debtData;
-  const keys = ['us','kr','eu','jp'];
+  const keys = Object.keys(d.countries);
   document.getElementById('debtStats').innerHTML = keys.map(k=>{
     const c = d.countries[k];
     const cls = c.current>=100?'dn':c.current>=80?'':'up';
@@ -673,7 +673,7 @@ async function initPMI() {
 
 function renderPMI() {
   const d = pmiData;
-  const keys = ['us','kr','eu','jp'];
+  const keys = Object.keys(d.countries);
   document.getElementById('pmiStats').innerHTML = keys.map(k=>{
     const c = d.countries[k];
     const above = c.current >= 50;
