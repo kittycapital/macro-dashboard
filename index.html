@@ -272,7 +272,7 @@ body {
     </div>
 
     <!-- ═══ 7. Global PMI ═══ -->
-    <div class="card s12" id="pmiCard">
+    <div class="card s6" id="pmiCard">
       <div class="card-label">MANUFACTURING PMI</div>
       <div class="card-title">🏭 글로벌 제조업 PMI</div>
       <div class="card-desc">제조업 구매관리자지수. 50 이상 확장, 이하 수축</div>
@@ -283,6 +283,20 @@ body {
       </div>
       <div class="stats" id="pmiStats"></div>
       <div class="chart-wrap"><canvas id="pmiChart" height="220"></canvas></div>
+    </div>
+
+    <!-- ═══ 8. Unemployment Rate ═══ -->
+    <div class="card s6" id="unempCard">
+      <div class="card-label">UNEMPLOYMENT RATE</div>
+      <div class="card-title">👷 주요국 실업률</div>
+      <div class="card-desc">주요국 실업률. 고용시장의 건강 상태를 나타내는 핵심 지표</div>
+      <div class="tabs" id="unempTabs">
+        <div class="tab" data-period="1y">1Y</div>
+        <div class="tab" data-period="5y">5Y</div>
+        <div class="tab active" data-period="all">ALL</div>
+      </div>
+      <div class="stats" id="unempStats"></div>
+      <div class="chart-wrap"><canvas id="unempChart" height="220"></canvas></div>
     </div>
 
   </div><!-- grid -->
@@ -721,11 +735,48 @@ function renderPMI() {
 }
 
 // ═══════════════════════════════════════
+// 8. UNEMPLOYMENT RATE
+// ═══════════════════════════════════════
+let unempData, unempPeriod='all';
+
+async function initUnemp() {
+  unempData = await loadJSON('unemployment.json');
+  renderUnemp();
+  setupTabs('unempTabs', p=>{unempPeriod=p; renderUnemp();});
+}
+
+function renderUnemp() {
+  const d = unempData;
+  const keys = Object.keys(d.countries);
+  document.getElementById('unempStats').innerHTML = keys.map(k=>{
+    const c = d.countries[k];
+    const chgStr = c.prev_change > 0 ? `▲ +${c.prev_change}%p` : c.prev_change < 0 ? `▼ ${c.prev_change}%p` : '— 동일';
+    const chgClass = c.prev_change>0?'dn':c.prev_change<0?'up':'flat';
+    return `<div class="stat"><div class="stat-flag">${c.flag}</div><div class="stat-val" style="color:${COLORS[k]};font-size:18px;">${c.current}%</div><div class="stat-chg ${chgClass}">${chgStr}</div><div class="stat-sub">${c.name}</div></div>`;
+  }).join('');
+
+  const f = filterMultiByPeriod(d.dates, d.series, unempPeriod);
+  const ctx = document.getElementById('unempChart').getContext('2d');
+  if(charts.unemp) charts.unemp.destroy();
+  charts.unemp = new Chart(ctx, {
+    type:'line',
+    data:{ labels:f.dates, datasets:keys.map(k=>({
+      label:d.countries[k].name, data:f.series[k],
+      borderColor:COLORS[k], tension:0.3
+    }))},
+    options:{
+      plugins:{legend:{display:true,labels:{boxWidth:10,padding:12,font:{size:10},color:'#6e6e88'}}},
+      scales:{x:baseScaleOpts, y:{...baseScaleOpts, ticks:{...baseScaleOpts.ticks, callback:v=>v+'%'}}}
+    }
+  });
+}
+
+// ═══════════════════════════════════════
 // INIT ALL
 // ═══════════════════════════════════════
 async function init() {
   try {
-    await Promise.all([initM2(), initFed(), initYC(), initNFCI(), initRates(), initDebt(), initPMI()]);
+    await Promise.all([initM2(), initFed(), initYC(), initNFCI(), initRates(), initDebt(), initPMI(), initUnemp()]);
   } catch(e) {
     console.error('Dashboard init error:', e);
   }
