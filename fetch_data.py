@@ -381,6 +381,58 @@ def fetch_pmi():
 
 
 # ═══════════════════════════════════════
+# 8. UNEMPLOYMENT RATE
+# ═══════════════════════════════════════
+def fetch_unemployment():
+    print("👷 Fetching Unemployment Rate...")
+    unemp_series = {
+        "us": ("UNRATE", "미국", "🇺🇸"),
+        "kr": ("LRUN64TTKRM156S", "한국", "🇰🇷"),
+        "eu": ("LRHUTTTTEZM156S", "유로존", "🇪🇺"),
+        "jp": ("LRUN64TTJPM156S", "일본", "🇯🇵"),
+        "cn": ("LRUN64TTCNM156S", "중국", "🇨🇳"),
+    }
+
+    all_dates = set()
+    series_data = {}
+    countries_info = {}
+
+    for key, (sid, name, flag) in unemp_series.items():
+        try:
+            d, v = fred_fetch(sid, start="2000-01-01", freq="m")
+            vals = [round(x, 1) for x in v]
+            series_data[key] = dict(zip(d, vals))
+            all_dates.update(d)
+
+            current = vals[-1] if vals else 0
+            prev = vals[-2] if len(vals) >= 2 else current
+            countries_info[key] = {
+                "name": name, "flag": flag,
+                "current": current,
+                "prev_change": round(current - prev, 1)
+            }
+        except Exception as e:
+            print(f"  ⚠️ {key} unemployment fetch failed: {e}")
+
+    sorted_dates = sorted(all_dates)
+    aligned_series = {}
+    for key in series_data:
+        aligned_series[key] = []
+        last_val = 0
+        for d in sorted_dates:
+            if d in series_data[key]:
+                last_val = series_data[key][d]
+            aligned_series[key].append(last_val)
+
+    save_json("unemployment.json", {
+        "last_updated": TODAY,
+        "countries": countries_info,
+        "dates": sorted_dates,
+        "series": aligned_series
+    })
+
+
+# ═══════════════════════════════════════
 # MAIN
 # ═══════════════════════════════════════
 def main():
@@ -401,6 +453,7 @@ def main():
         ("Interest Rates", fetch_rates),
         ("Debt/GDP", fetch_debt_gdp),
         ("PMI", fetch_pmi),
+        ("Unemployment", fetch_unemployment),
     ]
 
     for name, func in tasks:
