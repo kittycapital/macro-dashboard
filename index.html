@@ -246,12 +246,12 @@ body {
     <!-- ═══ 5. Interest Rates ═══ -->
     <div class="card s7" id="ratesCard">
       <div class="card-label">CENTRAL BANK RATES</div>
-      <div class="card-title">🏦 G7 + 한국 기준금리</div>
+      <div class="card-title">🏦 주요국 기준금리</div>
       <div class="card-desc">주요국 중앙은행 기준금리 추이. 글로벌 통화정책 방향 확인</div>
       <div class="tabs" id="ratesTabs">
         <div class="tab" data-period="3y">3Y</div>
-        <div class="tab active" data-period="5y">5Y</div>
-        <div class="tab" data-period="all">ALL</div>
+        <div class="tab" data-period="5y">5Y</div>
+        <div class="tab active" data-period="all">ALL</div>
       </div>
       <div class="stats" id="ratesStats"></div>
       <div class="chart-wrap"><canvas id="ratesChart" height="220"></canvas></div>
@@ -263,9 +263,9 @@ body {
       <div class="card-title">💳 국가부채 / GDP</div>
       <div class="card-desc">GDP 대비 정부부채 비율. 100% 초과 시 재정건전성 주의</div>
       <div class="tabs" id="debtTabs">
-        <div class="tab active" data-period="10y">10Y</div>
+        <div class="tab" data-period="10y">10Y</div>
         <div class="tab" data-period="20y">20Y</div>
-        <div class="tab" data-period="all">ALL</div>
+        <div class="tab active" data-period="all">ALL</div>
       </div>
       <div class="stats" id="debtStats"></div>
       <div class="chart-wrap"><canvas id="debtChart" height="220"></canvas></div>
@@ -278,8 +278,8 @@ body {
       <div class="card-desc">제조업 구매관리자지수. 50 이상 확장, 이하 수축</div>
       <div class="tabs" id="pmiTabs">
         <div class="tab" data-period="1y">1Y</div>
-        <div class="tab active" data-period="3y">3Y</div>
-        <div class="tab" data-period="all">ALL</div>
+        <div class="tab" data-period="3y">3Y</div>
+        <div class="tab active" data-period="all">ALL</div>
       </div>
       <div class="stats" id="pmiStats"></div>
       <div class="chart-wrap"><canvas id="pmiChart" height="220"></canvas></div>
@@ -574,7 +574,7 @@ function renderNFCI() {
 // ═══════════════════════════════════════
 // 5. INTEREST RATES
 // ═══════════════════════════════════════
-let ratesData, ratesPeriod='5y';
+let ratesData, ratesPeriod='all';
 
 async function initRates() {
   ratesData = await loadJSON('rates.json');
@@ -611,7 +611,7 @@ function renderRates() {
 // ═══════════════════════════════════════
 // 6. DEBT / GDP
 // ═══════════════════════════════════════
-let debtData, debtPeriod='10y';
+let debtData, debtPeriod='all';
 
 async function initDebt() {
   debtData = await loadJSON('debt_gdp.json');
@@ -663,7 +663,7 @@ function renderDebt() {
 // ═══════════════════════════════════════
 // 7. GLOBAL PMI
 // ═══════════════════════════════════════
-let pmiData, pmiPeriod='3y';
+let pmiData, pmiPeriod='all';
 
 async function initPMI() {
   pmiData = await loadJSON('pmi.json');
