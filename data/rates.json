@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-02-15",
+  "last_updated": "2026-02-16",
   "countries": {
     "us": {
       "name": "미국",
@@ -13,7 +13,7 @@
       "flag": "🇰🇷",
       "bank": "BOK",
       "current": 2.53,
-      "prev_change": 0.02
+      "prev_change": 0.0
     },
     "eu": {
       "name": "유로존",
@@ -26,8 +26,8 @@
       "name": "일본",
       "flag": "🇯🇵",
       "bank": "BOJ",
-      "current": 0.56,
-      "prev_change": 0.08
+      "current": 0.73,
+      "prev_change": 0.17
     },
     "cn": {
       "name": "중국",
@@ -1611,7 +1611,7 @@
       0.48,
       0.48,
       0.56,
-      0.56
+      0.73
     ],
     "cn": [
       3.24,
