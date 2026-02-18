@@ -56,27 +56,35 @@ def save_json(filename, data):
 def calc_yoy_from_index(dates, values):
     """
     월간 지수 데이터에서 YoY % 변화율 계산.
-    12개월 전 데이터와 비교하여 전년동기비 산출.
-    Returns: (yoy_dates, yoy_values)
+    YYYY-MM 월 기준으로 매칭하여 정확한 날짜 형식에 의존하지 않음.
+    Returns: (yoy_dates, yoy_values)  — yoy_dates는 YYYY-MM 형식
     """
-    # date -> value 매핑
-    date_val = dict(zip(dates, values))
+    # 월(YYYY-MM) -> 값 매핑 (같은 월 여러 값이면 마지막 값 사용)
+    month_val = {}
+    for d, v in zip(dates, values):
+        ym = d[:7]  # "2024-01-01" -> "2024-01"
+        month_val[ym] = v
+
     yoy_dates = []
     yoy_values = []
+    seen_months = set()
 
-    for i, d in enumerate(dates):
-        # 12개월 전 날짜 계산
-        dt = datetime.strptime(d, "%Y-%m-%d")
-        prev_dt = dt.replace(year=dt.year - 1)
-        prev_key = prev_dt.strftime("%Y-%m-%d")
+    for d, v in zip(dates, values):
+        ym = d[:7]
+        if ym in seen_months:
+            continue
 
-        # FRED 날짜는 보통 01일이라 정확히 매칭됨
-        if prev_key in date_val:
-            prev_val = date_val[prev_key]
-            if prev_val != 0:
-                yoy = round(((values[i] - prev_val) / prev_val) * 100, 1)
-                yoy_dates.append(d[:7])  # YYYY-MM 형식
-                yoy_values.append(yoy)
+        # 12개월 전 월 계산
+        year = int(ym[:4])
+        month = int(ym[5:7])
+        prev_year = year - 1
+        prev_ym = f"{prev_year}-{month:02d}"
+
+        if prev_ym in month_val and month_val[prev_ym] != 0:
+            yoy = round(((v - month_val[prev_ym]) / month_val[prev_ym]) * 100, 1)
+            yoy_dates.append(ym)
+            yoy_values.append(yoy)
+            seen_months.add(ym)
 
     return yoy_dates, yoy_values
 
@@ -555,6 +563,7 @@ def fetch_cpi_components():
             d, v = fred_fetch(series_id, start="2018-01-01", freq="m")
             yoy_dates, yoy_vals = calc_yoy_from_index(d, v)
             comp_yoy[name] = dict(zip(yoy_dates, yoy_vals))
+            print(f"  ✓ {name}: {len(yoy_dates)} data points")
         except Exception as e:
             print(f"  ⚠️ {name} ({series_id}) fetch failed: {e}")
 
@@ -562,29 +571,35 @@ def fetch_cpi_components():
         print("  ❌ No component data fetched")
         return
 
-    # 공통 날짜
-    all_date_sets = [set(m.keys()) for m in comp_yoy.values()]
-    common_dates = sorted(set.intersection(*all_date_sets))
+    # 날짜: 최소 2개 이상의 시리즈에 존재하는 날짜 사용 (strict intersection 대신)
+    all_dates = set()
+    for m in comp_yoy.values():
+        all_dates.update(m.keys())
+    sorted_dates = sorted(all_dates)
 
     comp_list = []
     for name in components:
         if name not in comp_yoy:
             continue
         m = comp_yoy[name]
-        vals = [m[d] for d in common_dates]
-        current = vals[-1] if vals else None
-        prev = vals[-2] if len(vals) >= 2 else current
+        vals = [m.get(d, None) for d in sorted_dates]
+        # None이 아닌 마지막 값 찾기
+        non_null = [(i, v) for i, v in enumerate(vals) if v is not None]
+        if len(non_null) < 2:
+            continue
+        current = non_null[-1][1]
+        prev = non_null[-2][1]
         comp_list.append({
             "name": name,
             "current": current,
-            "prev_change": round(current - prev, 1) if current is not None and prev is not None else 0,
+            "prev_change": round(current - prev, 1),
             "series": vals
         })
 
     save_json("cpi_components.json", {
         "last_updated": TODAY,
-        "latest_date": common_dates[-1] if common_dates else "",
-        "dates": common_dates,
+        "latest_date": sorted_dates[-1] if sorted_dates else "",
+        "dates": sorted_dates,
         "components": comp_list
     })
     print(f"  → {len(comp_list)} components saved")
