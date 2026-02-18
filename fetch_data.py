@@ -53,33 +53,50 @@ def save_json(filename, data):
     print(f"  ✅ {filename} saved ({len(json.dumps(data))} bytes)")
 
 
+def calc_yoy_from_index(dates, values):
+    """
+    월간 지수 데이터에서 YoY % 변화율 계산.
+    12개월 전 데이터와 비교하여 전년동기비 산출.
+    Returns: (yoy_dates, yoy_values)
+    """
+    # date -> value 매핑
+    date_val = dict(zip(dates, values))
+    yoy_dates = []
+    yoy_values = []
+
+    for i, d in enumerate(dates):
+        # 12개월 전 날짜 계산
+        dt = datetime.strptime(d, "%Y-%m-%d")
+        prev_dt = dt.replace(year=dt.year - 1)
+        prev_key = prev_dt.strftime("%Y-%m-%d")
+
+        # FRED 날짜는 보통 01일이라 정확히 매칭됨
+        if prev_key in date_val:
+            prev_val = date_val[prev_key]
+            if prev_val != 0:
+                yoy = round(((values[i] - prev_val) / prev_val) * 100, 1)
+                yoy_dates.append(d[:7])  # YYYY-MM 형식
+                yoy_values.append(yoy)
+
+    return yoy_dates, yoy_values
+
+
 # ═══════════════════════════════════════
 # 1. GLOBAL M2
 # ═══════════════════════════════════════
 def fetch_m2():
     print("📊 Fetching Global M2...")
-    # M2 시리즈 (월간, 조 달러)
-    # US: M2SL (billions USD)
-    # EU: MYAGM2EZM196N (national currency -> need conversion, use MANMM101EZM189S for index or find USD)
-    # Japan: MYAGM2JPM189N (billions yen -> convert)
-    # Korea: MYAGM2KRM189S (index) or use BOK data
-    # Simplified: Use M2 in national currency and convert roughly
-
     series = {
-        "us": {"id": "M2SL", "divisor": 1000},  # billions -> trillions
-        "eu": {"id": "MANMM101EZM189S", "divisor": 1},  # index
-        "jp": {"id": "MANMM101JPM189S", "divisor": 1},   # index
-        "kr": {"id": "MANMM101KRM189S", "divisor": 1},   # index
+        "us": {"id": "M2SL", "divisor": 1000},
+        "eu": {"id": "MANMM101EZM189S", "divisor": 1},
+        "jp": {"id": "MANMM101JPM189S", "divisor": 1},
+        "kr": {"id": "MANMM101KRM189S", "divisor": 1},
     }
 
-    # For total global M2, we use US M2 as the main driver and estimate total
     us_dates, us_values = fred_fetch("M2SL", start="2015-01-01", freq="m")
-    us_t = [v / 1000 for v in us_values]  # trillions
-
-    # Rough global M2 estimate: US M2 * ~4.3 (US is ~23% of global M2)
+    us_t = [v / 1000 for v in us_values]
     total_values = [round(v * 4.3, 1) for v in us_t]
 
-    # Individual country M2 (use FRED broad money series)
     countries = {}
     country_series = {
         "us": ("M2SL", 1000, "미국", "🇺🇸"),
@@ -92,7 +109,6 @@ def fetch_m2():
         try:
             d, v = fred_fetch(sid, start="2015-01-01", freq="m")
             vals = [round(x / div, 2) if div > 1 else round(x, 2) for x in v]
-            # Calculate YoY
             yoy = round(((vals[-1] - vals[-13]) / vals[-13]) * 100, 1) if len(vals) > 13 else 0
             countries[key] = {
                 "name": name, "flag": flag, "yoy_pct": yoy,
@@ -101,7 +117,6 @@ def fetch_m2():
         except Exception as e:
             print(f"  ⚠️ {key} M2 fetch failed: {e}")
 
-    # Total YoY
     total_yoy = round(((total_values[-1] - total_values[-13]) / total_values[-13]) * 100, 1) if len(total_values) > 13 else 0
 
     save_json("m2.json", {
@@ -123,9 +138,7 @@ def fetch_m2():
 def fetch_fed_bs():
     print("🏛️ Fetching Fed Balance Sheet...")
     dates, values = fred_fetch("WALCL", start="2008-01-01", freq="w")
-    # Convert millions to trillions
     vals_t = [round(v / 1000000, 2) for v in values]
-
     weekly_change = round(vals_t[-1] - vals_t[-2], 3) if len(vals_t) >= 2 else 0
 
     save_json("fed_balance_sheet.json", {
@@ -161,18 +174,13 @@ def fetch_yield_curve():
             if values:
                 current_rates.append(values[-1])
                 mat_labels.append(label)
-
-                # 1 year ago (approx -252 trading days)
                 target_1y = len(values) - 252
                 one_year_ago_rates.append(values[max(0, target_1y)])
-
-                # 1 month ago (approx -22 trading days)
                 target_1m = len(values) - 22
                 one_month_ago_rates.append(values[max(0, target_1m)])
         except Exception as e:
             print(f"  ⚠️ {label} yield fetch failed: {e}")
 
-    # Calculate spreads
     rate_map = dict(zip(mat_labels, current_rates))
     spread_2s10s = round(rate_map.get("10Y", 0) - rate_map.get("2Y", 0), 2)
     spread_3m10y = round(rate_map.get("10Y", 0) - rate_map.get("3M", 0), 2)
@@ -229,13 +237,12 @@ def fetch_nfci():
 # ═══════════════════════════════════════
 def fetch_rates():
     print("🏦 Fetching Interest Rates...")
-    # Central bank policy rates from FRED
     rate_series = {
-        "us": ("DFEDTARU", "미국", "🇺🇸", "Fed"),     # Fed upper target
+        "us": ("DFEDTARU", "미국", "🇺🇸", "Fed"),
         "kr": ("IRSTCI01KRM156N", "한국", "🇰🇷", "BOK"),
-        "eu": ("ECBMRRFR", "유로존", "🇪🇺", "ECB"),    # ECB main refinancing rate
+        "eu": ("ECBMRRFR", "유로존", "🇪🇺", "ECB"),
         "jp": ("IRSTCI01JPM156N", "일본", "🇯🇵", "BOJ"),
-        "cn": ("INTDSRCNM193N", "중국", "🇨🇳", "PBoC"),  # PBoC discount rate
+        "cn": ("INTDSRCNM193N", "중국", "🇨🇳", "PBoC"),
     }
 
     all_dates = set()
@@ -247,7 +254,6 @@ def fetch_rates():
             d, v = fred_fetch(sid, start="2000-01-01", freq="m")
             series_data[key] = dict(zip(d, v))
             all_dates.update(d)
-            # Current and previous
             current = v[-1] if v else 0
             prev = v[-2] if len(v) >= 2 else current
             countries_info[key] = {
@@ -258,7 +264,6 @@ def fetch_rates():
         except Exception as e:
             print(f"  ⚠️ {key} rate fetch failed: {e}")
 
-    # Align dates
     sorted_dates = sorted(all_dates)
     aligned_series = {}
     for key in series_data:
@@ -283,11 +288,11 @@ def fetch_rates():
 def fetch_debt_gdp():
     print("💳 Fetching Debt/GDP...")
     debt_series = {
-        "us": ("GFDEGDQ188S", "미국", "🇺🇸"),       # US federal debt/GDP quarterly
-        "jp": ("GGGDTAJPA188N", "일본", "🇯🇵"),      # Japan govt debt/GDP annual
-        "eu": ("GGGDTAEZA188N", "유로존", "🇪🇺"),     # Euro area
-        "kr": ("GGGDTAKRA188N", "한국", "🇰🇷"),       # Korea
-        "cn": ("GGGDTACNA188N", "중국", "🇨🇳"),       # China
+        "us": ("GFDEGDQ188S", "미국", "🇺🇸"),
+        "jp": ("GGGDTAJPA188N", "일본", "🇯🇵"),
+        "eu": ("GGGDTAEZA188N", "유로존", "🇪🇺"),
+        "kr": ("GGGDTAKRA188N", "한국", "🇰🇷"),
+        "cn": ("GGGDTACNA188N", "중국", "🇨🇳"),
     }
 
     all_dates = set()
@@ -297,7 +302,6 @@ def fetch_debt_gdp():
     for key, (sid, name, flag) in debt_series.items():
         try:
             d, v = fred_fetch(sid, start="2000-01-01", freq="a")
-            # Use yearly labels
             yearly_dates = [dt[:4] for dt in d]
             series_data[key] = dict(zip(yearly_dates, v))
             all_dates.update(yearly_dates)
@@ -329,8 +333,6 @@ def fetch_debt_gdp():
 # ═══════════════════════════════════════
 def fetch_pmi():
     print("🏭 Fetching PMI (OECD CLI)...")
-    # OECD CLI (Composite Leading Indicators) — free, no API key
-    # Alternatively use FRED's OECD CLI series
     pmi_series = {
         "us": ("USALOLITONOSTSAM", "미국", "🇺🇸"),
         "jp": ("JPNLOLITONOSTSAM", "일본", "🇯🇵"),
@@ -346,8 +348,6 @@ def fetch_pmi():
     for key, (sid, name, flag) in pmi_series.items():
         try:
             d, v = fred_fetch(sid, start="2015-01-01", freq="m")
-            # CLI is centered at 100, convert to PMI-like (centered at 50)
-            # PMI ≈ (CLI - 100) * 5 + 50 (rough mapping)
             pmi_vals = [round(max(30, min(65, (x - 100) * 5 + 50)), 1) for x in v]
             series_data[key] = dict(zip(d, pmi_vals))
             all_dates.update(d)
@@ -433,6 +433,198 @@ def fetch_unemployment():
 
 
 # ═══════════════════════════════════════
+# 9. US CPI (Headline & Core YoY)
+# ═══════════════════════════════════════
+def fetch_cpi():
+    print("🔥 Fetching US CPI...")
+    # CPIAUCSL: All Items CPI (Seasonally Adjusted)
+    # CPILFESL: Core CPI - All Items Less Food & Energy (SA)
+    h_dates, h_vals = fred_fetch("CPIAUCSL", start="1946-01-01", freq="m")
+    c_dates, c_vals = fred_fetch("CPILFESL", start="1957-01-01", freq="m")
+
+    # YoY 계산
+    h_yoy_dates, h_yoy_vals = calc_yoy_from_index(h_dates, h_vals)
+    c_yoy_dates, c_yoy_vals = calc_yoy_from_index(c_dates, c_vals)
+
+    # 공통 날짜 맞추기
+    h_map = dict(zip(h_yoy_dates, h_yoy_vals))
+    c_map = dict(zip(c_yoy_dates, c_yoy_vals))
+    common_dates = sorted(set(h_yoy_dates) & set(c_yoy_dates))
+
+    headline_series = [h_map[d] for d in common_dates]
+    core_series = [c_map[d] for d in common_dates]
+
+    h_current = headline_series[-1] if headline_series else None
+    c_current = core_series[-1] if core_series else None
+    h_prev = headline_series[-2] if len(headline_series) >= 2 else h_current
+    c_prev = core_series[-2] if len(core_series) >= 2 else c_current
+
+    save_json("cpi.json", {
+        "last_updated": TODAY,
+        "latest_date": common_dates[-1] if common_dates else "",
+        "headline": {
+            "current": h_current,
+            "prev_change": round(h_current - h_prev, 1) if h_current and h_prev else 0
+        },
+        "core": {
+            "current": c_current,
+            "prev_change": round(c_current - c_prev, 1) if c_current and c_prev else 0
+        },
+        "dates": common_dates,
+        "series": {
+            "headline": headline_series,
+            "core": core_series
+        }
+    })
+    print(f"  → Headline: {h_current}%, Core: {c_current}%")
+
+
+# ═══════════════════════════════════════
+# 10. US PPI (Headline & Core YoY)
+# ═══════════════════════════════════════
+def fetch_ppi():
+    print("🏭 Fetching US PPI...")
+    # PPIACO: All Commodities PPI
+    # PPIFES: Final Demand Less Foods, Energy, Trade Services (Core-ish, starts 2013)
+    # WPSFD4131: Finished Goods Less Food & Energy (longer history, starts 1974)
+    h_dates, h_vals = fred_fetch("PPIACO", start="1913-01-01", freq="m")
+
+    # Core PPI — try PPIFES first (newer, better), fallback to WPSFD4131
+    try:
+        c_dates, c_vals = fred_fetch("PPIFES", start="2009-01-01", freq="m")
+        if len(c_vals) < 24:
+            raise ValueError("Not enough PPIFES data")
+    except Exception:
+        print("  ℹ️ PPIFES unavailable, using WPSFD4131")
+        c_dates, c_vals = fred_fetch("WPSFD4131", start="1974-01-01", freq="m")
+
+    # YoY 계산
+    h_yoy_dates, h_yoy_vals = calc_yoy_from_index(h_dates, h_vals)
+    c_yoy_dates, c_yoy_vals = calc_yoy_from_index(c_dates, c_vals)
+
+    h_map = dict(zip(h_yoy_dates, h_yoy_vals))
+    c_map = dict(zip(c_yoy_dates, c_yoy_vals))
+    common_dates = sorted(set(h_yoy_dates) & set(c_yoy_dates))
+
+    headline_series = [h_map[d] for d in common_dates]
+    core_series = [c_map[d] for d in common_dates]
+
+    h_current = headline_series[-1] if headline_series else None
+    c_current = core_series[-1] if core_series else None
+    h_prev = headline_series[-2] if len(headline_series) >= 2 else h_current
+    c_prev = core_series[-2] if len(core_series) >= 2 else c_current
+
+    save_json("ppi.json", {
+        "last_updated": TODAY,
+        "latest_date": common_dates[-1] if common_dates else "",
+        "headline": {
+            "current": h_current,
+            "prev_change": round(h_current - h_prev, 1) if h_current and h_prev else 0
+        },
+        "core": {
+            "current": c_current,
+            "prev_change": round(c_current - c_prev, 1) if c_current and c_prev else 0
+        },
+        "dates": common_dates,
+        "series": {
+            "headline": headline_series,
+            "core": core_series
+        }
+    })
+    print(f"  → Headline: {h_current}%, Core: {c_current}%")
+
+
+# ═══════════════════════════════════════
+# 11. CPI COMPONENTS (YoY)
+# ═══════════════════════════════════════
+def fetch_cpi_components():
+    print("📊 Fetching CPI Components...")
+    components = {
+        "Shelter":   "CUSR0000SAH1",   # 주거
+        "Energy":    "CUSR0000SA0E",   # 에너지
+        "Food":      "CUSR0000SAF1",   # 식품
+        "Transport": "CUSR0000SAT",    # 교통
+        "Medical":   "CUSR0000SAM",    # 의료
+        "Apparel":   "CUSR0000SAA",    # 의류
+        "Education": "CUSR0000SAE",    # 교육·통신
+    }
+
+    comp_yoy = {}
+    for name, series_id in components.items():
+        try:
+            d, v = fred_fetch(series_id, start="2018-01-01", freq="m")
+            yoy_dates, yoy_vals = calc_yoy_from_index(d, v)
+            comp_yoy[name] = dict(zip(yoy_dates, yoy_vals))
+        except Exception as e:
+            print(f"  ⚠️ {name} ({series_id}) fetch failed: {e}")
+
+    if not comp_yoy:
+        print("  ❌ No component data fetched")
+        return
+
+    # 공통 날짜
+    all_date_sets = [set(m.keys()) for m in comp_yoy.values()]
+    common_dates = sorted(set.intersection(*all_date_sets))
+
+    comp_list = []
+    for name in components:
+        if name not in comp_yoy:
+            continue
+        m = comp_yoy[name]
+        vals = [m[d] for d in common_dates]
+        current = vals[-1] if vals else None
+        prev = vals[-2] if len(vals) >= 2 else current
+        comp_list.append({
+            "name": name,
+            "current": current,
+            "prev_change": round(current - prev, 1) if current is not None and prev is not None else 0,
+            "series": vals
+        })
+
+    save_json("cpi_components.json", {
+        "last_updated": TODAY,
+        "latest_date": common_dates[-1] if common_dates else "",
+        "dates": common_dates,
+        "components": comp_list
+    })
+    print(f"  → {len(comp_list)} components saved")
+
+
+# ═══════════════════════════════════════
+# 12. INFLATION EXPECTATIONS (5Y Breakeven)
+# ═══════════════════════════════════════
+def fetch_inflation_expectations():
+    print("📐 Fetching Inflation Expectations...")
+    # T5YIE: 5-Year Breakeven Inflation Rate (daily)
+    dates, values = fred_fetch("T5YIE", start="2003-01-01")
+    vals = [round(v, 2) for v in values]
+
+    # 월간 평균으로 리샘플링
+    monthly = {}
+    for d, v in zip(dates, vals):
+        ym = d[:7]  # YYYY-MM
+        if ym not in monthly:
+            monthly[ym] = []
+        monthly[ym].append(v)
+
+    monthly_dates = sorted(monthly.keys())
+    monthly_vals = [round(sum(monthly[ym]) / len(monthly[ym]), 2) for ym in monthly_dates]
+
+    current = monthly_vals[-1] if monthly_vals else None
+    prev = monthly_vals[-2] if len(monthly_vals) >= 2 else current
+
+    save_json("inflation_expectations.json", {
+        "last_updated": TODAY,
+        "latest_date": monthly_dates[-1] if monthly_dates else "",
+        "current": current,
+        "prev_change": round(current - prev, 2) if current is not None and prev is not None else 0,
+        "dates": monthly_dates,
+        "values": monthly_vals
+    })
+    print(f"  → 5Y Breakeven: {current}%")
+
+
+# ═══════════════════════════════════════
 # MAIN
 # ═══════════════════════════════════════
 def main():
@@ -454,6 +646,10 @@ def main():
         ("Debt/GDP", fetch_debt_gdp),
         ("PMI", fetch_pmi),
         ("Unemployment", fetch_unemployment),
+        ("US CPI", fetch_cpi),
+        ("US PPI", fetch_ppi),
+        ("CPI Components", fetch_cpi_components),
+        ("Inflation Expectations", fetch_inflation_expectations),
     ]
 
     for name, func in tasks:
