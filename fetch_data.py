@@ -548,13 +548,13 @@ def fetch_ppi():
 def fetch_cpi_components():
     print("📊 Fetching CPI Components...")
     components = {
-        "Shelter":   "CUSR0000SAH1",   # 주거
-        "Energy":    "CUSR0000SA0E",   # 에너지
-        "Food":      "CUSR0000SAF1",   # 식품
-        "Transport": "CUSR0000SAT",    # 교통
-        "Medical":   "CUSR0000SAM",    # 의료
-        "Apparel":   "CUSR0000SAA",    # 의류
-        "Education": "CUSR0000SAE",    # 교육·통신
+        "Shelter":   "CUSR0000SAH1",   # 주거 (원래 작동하던 것)
+        "Energy":    "CPIENGSL",        # 에너지 (SA, index)
+        "Food":      "CPIUFDSL",        # 식품 (SA, index)
+        "Transport": "CPITRNSL",        # 교통 (SA, index)
+        "Medical":   "CPIMEDSL",        # 의료 (SA, index)
+        "Apparel":   "CPIAPPSL",        # 의류 (SA, index)
+        "Education": "CPIEDUSL",        # 교육·통신 (SA, index)
     }
 
     comp_yoy = {}
