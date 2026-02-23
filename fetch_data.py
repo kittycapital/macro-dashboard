@@ -94,18 +94,14 @@ def calc_yoy_from_index(dates, values):
 # ═══════════════════════════════════════
 def fetch_m2():
     print("📊 Fetching Global M2...")
-    series = {
-        "us": {"id": "M2SL", "divisor": 1000},
-        "eu": {"id": "MANMM101EZM189S", "divisor": 1},
-        "jp": {"id": "MANMM101JPM189S", "divisor": 1},
-        "kr": {"id": "MANMM101KRM189S", "divisor": 1},
-    }
 
+    # --- 합산용 (기존 로직 유지) ---
     us_dates, us_values = fred_fetch("M2SL", start="2015-01-01", freq="m")
     us_t = [v / 1000 for v in us_values]
     total_values = [round(v * 4.3, 1) for v in us_t]
+    total_yoy = round(((total_values[-1] - total_values[-13]) / total_values[-13]) * 100, 1) if len(total_values) > 13 else 0
 
-    countries = {}
+    # --- 국가별 (날짜 정렬 방식) ---
     country_series = {
         "us": ("M2SL", 1000, "미국", "🇺🇸"),
         "eu": ("MABMM301EZM189S", 1, "유로존", "🇪🇺"),
@@ -113,19 +109,31 @@ def fetch_m2():
         "kr": ("MABMM301KRM189S", 1, "한국", "🇰🇷"),
     }
 
+    all_dates = set()
+    raw_series = {}
+    countries_info = {}
+
     for key, (sid, div, name, flag) in country_series.items():
         try:
             d, v = fred_fetch(sid, start="2015-01-01", freq="m")
             vals = [round(x / div, 2) if div > 1 else round(x, 2) for x in v]
+            raw_series[key] = dict(zip(d, vals))
+            all_dates.update(d)
             yoy = round(((vals[-1] - vals[-13]) / vals[-13]) * 100, 1) if len(vals) > 13 else 0
-            countries[key] = {
-                "name": name, "flag": flag, "yoy_pct": yoy,
-                "dates": d, "values": vals
-            }
+            countries_info[key] = {"name": name, "flag": flag, "yoy_pct": yoy}
         except Exception as e:
             print(f"  ⚠️ {key} M2 fetch failed: {e}")
 
-    total_yoy = round(((total_values[-1] - total_values[-13]) / total_values[-13]) * 100, 1) if len(total_values) > 13 else 0
+    # 공통 날짜 정렬 + forward fill
+    sorted_dates = sorted(all_dates)
+    aligned_series = {}
+    for key in raw_series:
+        aligned_series[key] = []
+        last_val = 0
+        for d in sorted_dates:
+            if d in raw_series[key]:
+                last_val = raw_series[key][d]
+            aligned_series[key].append(last_val)
 
     save_json("m2.json", {
         "last_updated": TODAY,
@@ -136,7 +144,9 @@ def fetch_m2():
             "dates": us_dates,
             "values": total_values
         },
-        "countries": countries
+        "countries": countries_info,
+        "country_dates": sorted_dates,
+        "country_series": aligned_series
     })
 
 
