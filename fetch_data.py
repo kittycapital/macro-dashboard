@@ -101,28 +101,64 @@ def fetch_m2():
     total_values = [round(v * 4.3, 1) for v in us_t]
     total_yoy = round(((total_values[-1] - total_values[-13]) / total_values[-13]) * 100, 1) if len(total_values) > 13 else 0
 
-    # --- 국가별 (날짜 정렬 방식) ---
-    country_series = {
-        "us": ("M2SL", 1000, "미국", "🇺🇸"),
-        "eu": ("MABMM301EZM189S", 1, "유로존", "🇪🇺"),
-        "jp": ("MABMM301JPM189S", 1, "일본", "🇯🇵"),
-        "kr": ("MABMM301KRM189S", 1, "한국", "🇰🇷"),
+    # --- 국가별: YoY % 성장률 (새 OECD 시리즈, 2025년까지 업데이트) ---
+    # 기존 MABMM301*M189S 시리즈는 2023년에 단종됨
+    # 새 시리즈: {COUNTRY}MABMM301GYSAM = Growth rate YoY, Seasonally Adjusted, Monthly
+    yoy_series = {
+        "us": ("USAMABMM301GYSAM", "미국", "🇺🇸"),
+        "eu": ("EA19MABMM301GYSAM", "유로존", "🇪🇺"),
+        "jp": ("JPNMABMM301GYSAM", "일본", "🇯🇵"),
+        "kr": ("KORMABMM301GYSAM", "한국", "🇰🇷"),
     }
+
+    # KR M3 growth가 없을 경우 대체 시리즈 (수동 YoY 계산)
+    kr_fallback_series = [
+        ("MYAGM2KRM189S", 1),   # IMF M2 for Korea (national currency)
+        ("MABMM301KRM189S", 1), # OECD M3 old format (단종됐지만 과거 데이터용)
+    ]
 
     all_dates = set()
     raw_series = {}
     countries_info = {}
 
-    for key, (sid, div, name, flag) in country_series.items():
+    for key, (sid, name, flag) in yoy_series.items():
         try:
             d, v = fred_fetch(sid, start="2015-01-01", freq="m")
-            vals = [round(x / div, 2) if div > 1 else round(x, 2) for x in v]
+            vals = [round(x, 2) for x in v]
             raw_series[key] = dict(zip(d, vals))
             all_dates.update(d)
-            yoy = round(((vals[-1] - vals[-13]) / vals[-13]) * 100, 1) if len(vals) > 13 else 0
-            countries_info[key] = {"name": name, "flag": flag, "yoy_pct": yoy}
+            current_yoy = vals[-1] if vals else 0
+            countries_info[key] = {"name": name, "flag": flag, "yoy_pct": current_yoy}
+            print(f"  ✅ {key} M3 YoY: {len(d)} pts, latest={current_yoy}%")
         except Exception as e:
-            print(f"  ⚠️ {key} M2 fetch failed: {e}")
+            print(f"  ⚠️ {key} M3 YoY fetch failed: {e}")
+            # KR fallback: 레벨 데이터에서 직접 YoY 계산
+            if key == "kr":
+                for fb_sid, fb_div in kr_fallback_series:
+                    try:
+                        d, v = fred_fetch(fb_sid, start="2014-01-01", freq="m")
+                        vals = [x / fb_div for x in v]
+                        # 12개월 전 대비 YoY% 계산
+                        yoy_vals = []
+                        yoy_dates = []
+                        for i in range(12, len(vals)):
+                            if vals[i - 12] != 0:
+                                yoy_pct = round(((vals[i] - vals[i - 12]) / vals[i - 12]) * 100, 2)
+                            else:
+                                yoy_pct = 0
+                            yoy_vals.append(yoy_pct)
+                            yoy_dates.append(d[i])
+                        # 2015-01-01 이후만 필터
+                        filtered = [(dt, vl) for dt, vl in zip(yoy_dates, yoy_vals) if dt >= "2015-01-01"]
+                        if filtered:
+                            fd, fv = zip(*filtered)
+                            raw_series[key] = dict(zip(fd, fv))
+                            all_dates.update(fd)
+                            countries_info[key] = {"name": name, "flag": flag, "yoy_pct": fv[-1]}
+                            print(f"  ✅ {key} fallback ({fb_sid}): {len(fd)} pts, latest={fv[-1]}%")
+                            break
+                    except Exception as e2:
+                        print(f"  ⚠️ {key} fallback {fb_sid} failed: {e2}")
 
     # 공통 날짜 정렬 + forward fill
     sorted_dates = sorted(all_dates)
