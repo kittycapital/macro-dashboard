@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>매크로 — 물가 & 인플레이션 | Herdvibe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Bebas+Neue&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.1/kakao.min.js" crossorigin="anonymous" async></script>
+<style>
+/* ===== HERDVIBE DESIGN TOKENS ===== */
+:root {
+  --hv-primary:#3b82f6;--hv-primary-light:#60a5fa;--hv-primary-dark:#2563eb;
+  --hv-primary-glow:rgba(59,130,246,0.12);
+  --hv-up:#22c55e;--hv-up-bg:rgba(34,197,94,0.1);
+  --hv-down:#ef4444;--hv-down-bg:rgba(239,68,68,0.1);
+  --hv-warning:#f59e0b;--hv-warning-bg:rgba(245,158,11,0.1);
+  --hv-neutral:#6b7280;
+  --hv-bg-base:#000;--hv-bg-surface:#0a0a0a;--hv-bg-card:#111;
+  --hv-bg-card-hover:#181818;--hv-bg-elevated:#1a1a1a;
+  --hv-text-primary:#e5e5e5;--hv-text-secondary:#8a8a8a;
+  --hv-text-tertiary:#555;--hv-text-muted:#3a3a3a;
+  --hv-border:rgba(255,255,255,0.06);--hv-border-strong:rgba(255,255,255,0.12);
+  --hv-font-display:'Plus Jakarta Sans',sans-serif;
+  --hv-font-body:'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif;
+  --hv-font-mono:'JetBrains Mono','SF Mono',monospace;
+  --hv-space-xs:8px;--hv-space-sm:12px;--hv-space-md:16px;
+  --hv-space-lg:24px;--hv-space-xl:32px;
+  --hv-radius-sm:6px;--hv-radius-md:10px;--hv-radius-lg:14px;
+  --hv-shadow-sm:0 1px 3px rgba(0,0,0,.5);--hv-shadow-lg:0 8px 32px rgba(0,0,0,.7);
+  --hv-transition-fast:150ms ease;--hv-transition:250ms ease;
+  --hv-max-width:1280px;--hv-header-height:60px;
+  --blue:#4a9eff;--cyan:#00e5cc;--red:#ff4a6a;--orange:#ff8c42;
+  --yellow:#ffd642;--green:#42ff8c;--purple:#a855f7;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;scroll-behavior:smooth;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body{font-family:var(--hv-font-body);background:var(--hv-bg-base);color:var(--hv-text-primary);line-height:1.6;min-height:100vh;overflow-x:hidden}
+a{color:var(--hv-primary-light);text-decoration:none}
+::selection{background:var(--hv-primary);color:#fff}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--hv-bg-base)}
+::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+.hv-header{position:sticky;top:0;z-index:100;height:var(--hv-header-height);background:rgba(0,0,0,.9);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--hv-border);display:flex;align-items:center;padding:0 var(--hv-space-lg)}
+.hv-header-inner{width:100%;max-width:var(--hv-max-width);margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:var(--hv-space-md)}
+.hv-logo{display:flex;align-items:center;gap:10px;font-family:var(--hv-font-display);font-weight:800;font-size:1.15rem;color:var(--hv-text-primary);text-decoration:none;white-space:nowrap;letter-spacing:-.02em}
+.hv-logo-mark{width:28px;height:28px;background:linear-gradient(135deg,var(--hv-primary),#6366f1);border-radius:7px;flex-shrink:0}
+.hv-header-center{display:flex;flex-direction:column;min-width:0}
+.hv-header-center h1{font-family:var(--hv-font-display);font-size:.938rem;font-weight:600;color:var(--hv-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hv-header-category{font-size:.7rem;color:var(--hv-text-tertiary);font-weight:500;text-transform:uppercase;letter-spacing:.08em}
+.hv-header-right{display:flex;align-items:center;gap:var(--hv-space-xs);flex-shrink:0}
+.hv-update-badge{font-family:var(--hv-font-mono);font-size:.688rem;color:var(--hv-text-tertiary);white-space:nowrap;display:flex;align-items:center;gap:6px}
+.hv-live-dot{width:5px;height:5px;background:var(--hv-up);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.hv-page{max-width:var(--hv-max-width);margin:0 auto;padding:var(--hv-space-lg)}
+.dash-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+.card{background:var(--hv-bg-card);border:1px solid var(--hv-border);border-radius:var(--hv-radius-lg);padding:18px 20px 16px;position:relative;overflow:visible;animation:fadeUp .5s ease both}
+.card:nth-child(1){animation-delay:.05s}.card:nth-child(2){animation-delay:.08s}
+.card:nth-child(3){animation-delay:.11s}.card:nth-child(4){animation-delay:.14s}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.card-label{font-family:var(--hv-font-mono);font-size:10px;font-weight:500;color:var(--hv-text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px}
+.card-title{font-size:15px;font-weight:700;margin-bottom:2px;display:flex;align-items:center;gap:7px}
+.card-desc{font-size:11.5px;color:var(--hv-text-secondary);margin-bottom:14px;line-height:1.5}
+.tabs{display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap}
+.tab{padding:5px 12px;border-radius:6px;font-family:var(--hv-font-mono);font-size:10.5px;font-weight:500;color:var(--hv-text-muted);background:transparent;border:1px solid transparent;cursor:pointer;transition:all .2s;user-select:none}
+.tab:hover{color:var(--hv-text-secondary);background:rgba(255,255,255,.03)}
+.tab.active{color:var(--cyan);background:rgba(0,229,204,.08);border-color:rgba(0,229,204,.2)}
+.stats{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.stat{background:rgba(255,255,255,.02);border:1px solid var(--hv-border);border-radius:8px;padding:10px 14px;min-width:0;flex:1}
+.stat-flag{font-size:16px;margin-bottom:2px}
+.stat-val{font-family:var(--hv-font-mono);font-size:20px;font-weight:700;line-height:1.2}
+.stat-sub{font-size:10px;color:var(--hv-text-secondary);margin-top:1px}
+.stat-chg{font-family:var(--hv-font-mono);font-size:11px;font-weight:600;margin-top:2px}
+.up{color:var(--green)}.dn{color:var(--red)}.flat{color:var(--hv-text-muted)}
+.chart-wrap{position:relative;width:100%;height:220px}
+.chart-wrap canvas{width:100%!important;height:100%!important}
+.s12{grid-column:span 12}.s8{grid-column:span 8}.s7{grid-column:span 7}
+.s6{grid-column:span 6}.s5{grid-column:span 5}.s4{grid-column:span 4}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-family:var(--hv-font-mono);font-size:9.5px;font-weight:600}
+.badge-red{background:rgba(255,74,106,.1);color:var(--red)}
+.badge-green{background:rgba(66,255,140,.1);color:var(--green)}
+.share-bar{display:flex;align-items:center;justify-content:space-between;padding:12px var(--hv-space-lg);border-top:1px solid var(--hv-border);background:var(--hv-bg-surface);border-radius:0 0 var(--hv-radius-lg) var(--hv-radius-lg)}
+.share-bar-preview{font-size:.75rem;color:var(--hv-text-tertiary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:50%;line-height:1.4;font-family:var(--hv-font-mono)}
+.share-bar-preview span{color:var(--hv-text-secondary);font-weight:500}
+.share-bar-buttons{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.share-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;font-size:.75rem;font-weight:600;font-family:var(--hv-font-body);cursor:pointer;transition:all var(--hv-transition-fast);border:1px solid var(--hv-border-strong);background:var(--hv-bg-card);color:#999;white-space:nowrap}
+.share-btn:hover{transform:translateY(-1px);box-shadow:var(--hv-shadow-sm);color:var(--hv-text-primary)}
+.share-btn svg{flex-shrink:0}
+.share-btn--x:hover{border-color:#fff;color:#fff;background:#111}
+.share-btn--kakao:hover{border-color:#FEE500;color:#191919;background:#FEE500}
+.share-btn--tg:hover{border-color:#26A5E4;color:#fff;background:rgba(38,165,228,.15)}
+.share-btn--copy:hover{border-color:var(--hv-primary);color:var(--hv-primary-light);background:var(--hv-primary-glow)}
+.toast-wrap{position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--hv-bg-elevated);border:1px solid var(--hv-border-strong);border-radius:var(--hv-radius-md);padding:10px 18px;font-size:.788rem;color:var(--hv-text-primary);box-shadow:var(--hv-shadow-lg);animation:toastIn .3s ease;border-left:3px solid var(--hv-up)}
+@keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:1024px){.s8,.s7,.s6,.s5,.s4{grid-column:span 12}}
+@media(max-width:768px){:root{--hv-header-height:52px}.hv-page{padding:var(--hv-space-md)}.hv-header{padding:0 var(--hv-space-md)}.hv-update-badge{display:none}.dash-grid{gap:10px}.card{padding:14px 14px 12px}.stats{gap:6px}.stat{padding:8px 10px}.stat-val{font-size:16px}.card-title{font-size:14px}.chart-wrap{height:200px}.share-bar{flex-direction:column;gap:10px;align-items:stretch}.share-bar-preview{max-width:100%}.share-bar-buttons{justify-content:center;flex-wrap:wrap}.share-btn span.label-text{display:none}.share-btn{padding:8px 10px}}
+@media(max-width:520px){.hv-page{padding:12px 10px 24px}}
+</style>
+</head>
+<body>
+
+<header class="hv-header">
+  <div class="hv-header-inner">
+    <div class="hv-header-center">
+      <h1>매크로 — 물가 & 인플레이션</h1>
+      <span class="hv-header-category">Macro · Inflation</span>
+    </div>
+    <div class="hv-header-right">
+      <div class="hv-update-badge"><span class="hv-live-dot"></span><span id="lastUpdate">업데이트 중...</span></div>
+    </div>
+  </div>
+</header>
+
+<div class="hv-page">
+  <div class="dash-grid">
+
+    <!-- 1. US CPI -->
+    <div class="card s7" id="cpiCard">
+      <div class="card-label">US CONSUMER PRICE INDEX</div>
+      <div class="card-title">🔥 미국 CPI (YoY)</div>
+      <div class="card-desc">소비자물가지수 전년동기비. Headline vs Core(식품·에너지 제외). 2% 인플레이션 타겟 기준선</div>
+      <div class="tabs" id="cpiTabs">
+        <div class="tab" data-period="1y">1Y</div>
+        <div class="tab" data-period="3y">3Y</div>
+        <div class="tab" data-period="5y">5Y</div>
+        <div class="tab active" data-period="all">ALL</div>
+      </div>
+      <div class="stats" id="cpiStats"></div>
+      <div class="chart-wrap"><canvas id="cpiChart" height="220"></canvas></div>
+    </div>
+
+    <!-- 2. US PPI -->
+    <div class="card s5" id="ppiCard">
+      <div class="card-label">US PRODUCER PRICE INDEX</div>
+      <div class="card-title">🏭 미국 PPI (YoY)</div>
+      <div class="card-desc">생산자물가지수 전년동기비. PPI는 CPI에 선행하는 인플레이션 지표</div>
+      <div class="tabs" id="ppiTabs">
+        <div class="tab" data-period="1y">1Y</div>
+        <div class="tab" data-period="3y">3Y</div>
+        <div class="tab" data-period="5y">5Y</div>
+        <div class="tab active" data-period="all">ALL</div>
+      </div>
+      <div class="stats" id="ppiStats"></div>
+      <div class="chart-wrap"><canvas id="ppiChart" height="220"></canvas></div>
+    </div>
+
+    <!-- 3. CPI Components -->
+    <div class="card s12" id="compCard">
+      <div class="card-label">CPI COMPONENTS (YoY)</div>
+      <div class="card-title">📊 CPI 세부항목</div>
+      <div class="card-desc">주요 카테고리별 전년동기비. 인플레이션을 주도하는 항목 확인</div>
+      <div class="tabs" id="compTabs">
+        <div class="tab active" data-mode="bar">최신값</div>
+        <div class="tab" data-mode="line">추이</div>
+      </div>
+      <div class="stats" id="compStats"></div>
+      <div class="chart-wrap" style="height:260px"><canvas id="compChart" height="260"></canvas></div>
+    </div>
+
+    <!-- 4. Inflation Expectations -->
+    <div class="card s6" id="expCard">
+      <div class="card-label">INFLATION EXPECTATIONS</div>
+      <div class="card-title">📐 기대 인플레이션</div>
+      <div class="card-desc">5년 Breakeven 인플레이션율. 시장이 예상하는 향후 인플레이션 방향</div>
+      <div class="tabs" id="expTabs">
+        <div class="tab" data-period="1y">1Y</div>
+        <div class="tab" data-period="3y">3Y</div>
+        <div class="tab" data-period="5y">5Y</div>
+        <div class="tab active" data-period="all">ALL</div>
+      </div>
+      <div class="stats" id="expStats"></div>
+      <div class="chart-wrap"><canvas id="expChart" height="220"></canvas></div>
+    </div>
+
+  </div>
+
+  <!-- SHARE BAR -->
+  <div style="background:var(--hv-bg-card);border:1px solid var(--hv-border);border-radius:var(--hv-radius-lg);margin-top:var(--hv-space-lg);overflow:hidden">
+    <div class="share-bar" style="border-top:none">
+      <div class="share-bar-preview"><span>매크로 — 물가 & 인플레이션</span> — herdvibe.com</div>
+      <div class="share-bar-buttons">
+        <button class="share-btn share-btn--x" onclick="doShare('twitter')"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg><span class="label-text">트위터</span></button>
+        <button class="share-btn share-btn--kakao" onclick="doShare('kakao')"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.477 3 2 6.463 2 10.691c0 2.724 1.8 5.112 4.508 6.458l-1.148 4.265a.5.5 0 0 0 .764.533l4.94-3.26c.304.02.612.03.936.03 5.523 0 10-3.462 10-7.735C22 6.463 17.523 3 12 3z"/></svg><span class="label-text">카카오톡</span></button>
+        <button class="share-btn share-btn--tg" onclick="doShare('telegram')"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg><span class="label-text">텔레그램</span></button>
+        <button class="share-btn" onclick="doShare('instagram',this)" style="border-color:var(--hv-border-strong)"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg><span class="label-text">인스타</span></button>
+        <button class="share-btn share-btn--copy" onclick="doShare('link',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span class="label-text">링크 복사</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== SHARE & TOAST ===== */
+var SHARE_URL = 'https://herdvibe.com/30';
+function ensureKakao(){try{if(typeof Kakao!=='undefined'&&!Kakao.isInitialized())Kakao.init('a43ed7b39fac35458f4f9df925a279b5');return typeof Kakao!=='undefined'&&Kakao.isInitialized();}catch(e){return false;}}
+ensureKakao();
+function kakaoShare(title,desc){if(!ensureKakao()){copyToClipboard(SHARE_URL);toast('링크 복사완료! 카카오톡에 붙여넣기 하세요');return;}try{Kakao.Share.sendDefault({objectType:'feed',content:{title:title||'매크로 — 물가 & 인플레이션',description:desc||'CPI, PPI, CPI 세부항목, 기대 인플레이션 분석',imageUrl:'https://raw.githubusercontent.com/kittycapital/kittycapital.github.io/main/assets/herdvibe-og.png',link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}},buttons:[{title:'대시보드 보기',link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}}]});}catch(e){copyToClipboard(SHARE_URL);toast('링크 복사완료! 카카오톡에 붙여넣기 하세요');}}
+function copyToClipboard(text){try{window.parent.postMessage({type:'clipboard',text:text},'*');}catch(e){}}
+function flashCopied(btn){if(!btn)return;var orig=btn.innerHTML;btn.style.background='#22c55e';btn.style.color='#fff';btn.style.borderColor='#22c55e';var hasLabel=btn.querySelector('.label-text');btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg>'+(hasLabel?'<span class="label-text" style="color:#fff">복사됨!</span>':'');setTimeout(function(){btn.style.background='';btn.style.color='';btn.style.borderColor='';btn.innerHTML=orig;},2000);}
+function doShare(p,btn){var u=SHARE_URL;var t=encodeURIComponent('매크로 — 물가 & 인플레이션 | herdvibe.com');var eu=encodeURIComponent(u);switch(p){case'twitter':window.open('https://twitter.com/intent/tweet?text='+t+'&url='+eu,'_blank');break;case'telegram':window.open('https://t.me/share/url?url='+eu+'&text='+t,'_blank');break;case'kakao':kakaoShare();break;case'instagram':copyToClipboard(u);flashCopied(btn);toast('링크 복사완료! 인스타그램에 붙여넣기 하세요');break;case'link':copyToClipboard(u);flashCopied(btn);toast('링크가 복사되었습니다 ✓');break;}}
+var CARD_SHARE_INFO={cpiCard:'미국 CPI — 소비자물가 인플레이션',ppiCard:'미국 PPI — 생산자물가 인플레이션',compCard:'CPI 세부항목 — 카테고리별 인플레이션',expCard:'기대 인플레이션 — 시장 전망'};
+function doCardShare(cardId,p,btn){var u=SHARE_URL;var info=CARD_SHARE_INFO[cardId]||'인플레이션 대시보드';var t=encodeURIComponent(info+' | herdvibe.com');var eu=encodeURIComponent(u);switch(p){case'twitter':window.open('https://twitter.com/intent/tweet?text='+t+'&url='+eu,'_blank');break;case'telegram':window.open('https://t.me/share/url?url='+eu+'&text='+t,'_blank');break;case'kakao':kakaoShare(info);break;case'instagram':copyToClipboard(u);flashCopied(btn);toast('링크 복사완료! 인스타그램에 붙여넣기 하세요');break;case'link':copyToClipboard(u);flashCopied(btn);toast('링크가 복사되었습니다 ✓');break;}}
+function makeShareBar(cardId){var igSvg='<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>';return '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid var(--hv-border)"><div style="font-family:var(--hv-font-mono);font-size:.65rem;color:var(--hv-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;margin-right:8px">herdvibe.com</div><div style="display:flex;gap:4px;flex-shrink:0"><button class="share-btn" onclick="doCardShare(\''+cardId+'\',\'twitter\')" style="padding:6px 8px;border-radius:5px" title="X"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></button><button class="share-btn" onclick="doCardShare(\''+cardId+'\',\'kakao\')" style="padding:6px 8px;border-radius:5px" title="카카오"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.477 3 2 6.463 2 10.691c0 2.724 1.8 5.112 4.508 6.458l-1.148 4.265a.5.5 0 0 0 .764.533l4.94-3.26c.304.02.612.03.936.03 5.523 0 10-3.462 10-7.735C22 6.463 17.523 3 12 3z"/></svg></button><button class="share-btn" onclick="doCardShare(\''+cardId+'\',\'telegram\')" style="padding:6px 8px;border-radius:5px" title="텔레그램"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg></button><button class="share-btn" onclick="doCardShare(\''+cardId+'\',\'instagram\',this)" style="padding:6px 8px;border-radius:5px" title="인스타">'+igSvg+'</button><button class="share-btn" onclick="doCardShare(\''+cardId+'\',\'link\',this)" style="padding:6px 8px;border-radius:5px" title="링크복사"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button></div></div>';}
+function injectShareBars(){Object.keys(CARD_SHARE_INFO).forEach(function(id){var el=document.getElementById(id);if(el)el.insertAdjacentHTML('beforeend',makeShareBar(id));});}
+function toast(msg){var c=document.querySelector('.toast-wrap');if(!c){c=document.createElement('div');c.className='toast-wrap';document.body.appendChild(c)}var t=document.createElement('div');t.className='toast';t.textContent=msg;c.appendChild(t);setTimeout(function(){t.style.opacity='0';t.style.transform='translateY(12px)';t.style.transition='.3s';setTimeout(function(){t.remove()},300)},3000)}
+
+/* ===== WATERMARK ===== */
+var watermarkPlugin={id:'herdvibeWatermark',beforeDraw:function(ch){var ctx=ch.ctx,ca=ch.chartArea;if(!ca)return;ctx.save();ctx.font='700 28px "Plus Jakarta Sans",sans-serif';ctx.fillStyle='rgba(255,255,255,0.03)';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('Herdvibe.com',(ca.left+ca.right)/2,(ca.top+ca.bottom)/2);ctx.restore()}};
+Chart.register(watermarkPlugin);
+
+/* ===== CHART SETUP ===== */
+const DATA_BASE='data/';
+const COLORS={blue:'#4a9eff',cyan:'#00e5cc',red:'#ff4a6a',orange:'#ff8c42',yellow:'#ffd642',green:'#42ff8c',purple:'#a855f7'};
+Chart.defaults.font.family="'JetBrains Mono','Noto Sans KR',monospace";
+Chart.defaults.font.size=10;Chart.defaults.color='#3a3a52';
+Chart.defaults.plugins.legend.display=false;
+Chart.defaults.elements.point.radius=0;Chart.defaults.elements.point.hoverRadius=4;
+Chart.defaults.elements.line.borderWidth=2;Chart.defaults.animation.duration=600;
+Chart.defaults.responsive=true;Chart.defaults.maintainAspectRatio=false;
+const gridColor='rgba(255,255,255,0.04)';
+const baseScaleOpts={grid:{color:gridColor,drawBorder:false},ticks:{maxTicksLimit:6,padding:6,font:{size:9}}};
+function hexToRGBA(hex,a){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return`rgba(${r},${g},${b},${a})`;}
+function filterByPeriod(dates,values,period){if(period==='all')return{dates,values};var map={'1m':1,'3m':3,'6m':6,'1y':12,'3y':36,'5y':60,'10y':120,'20y':240};var months=map[period]||60;var now=new Date();var cutY=now.getFullYear(),cutM=now.getMonth()-months;while(cutM<0){cutM+=12;cutY--;}var cutStr=cutY+'-'+String(cutM+1).padStart(2,'0')+'-01';var filtered=dates.reduce((acc,d,i)=>{if(d>=cutStr){acc.dates.push(d);acc.values.push(values[i]);}return acc;},{dates:[],values:[]});return filtered;}
+function filterMultiByPeriod(dates,seriesObj,period){if(period==='all')return{dates,series:seriesObj};var map={'1m':1,'3m':3,'6m':6,'1y':12,'3y':36,'5y':60,'10y':120,'20y':240};var months=map[period]||60;var now=new Date();var cutY=now.getFullYear(),cutM=now.getMonth()-months;while(cutM<0){cutM+=12;cutY--;}var cutStr=cutY+'-'+String(cutM+1).padStart(2,'0')+'-01';var out={dates:[],series:{}};Object.keys(seriesObj).forEach(k=>out.series[k]=[]);dates.forEach((d,i)=>{if(d>=cutStr){out.dates.push(d);Object.keys(seriesObj).forEach(k=>out.series[k].push(seriesObj[k][i]));}});return out;}
+async function loadJSON(file){const r=await fetch(DATA_BASE+file);return r.json();}
+function setupTabs(containerId,callback){const c=document.getElementById(containerId);if(!c)return;c.querySelectorAll('.tab').forEach(t=>{t.addEventListener('click',()=>{c.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');callback(t.dataset.period||t.dataset.mode);});});}
+const charts={};
+
+/* ===== 1. US CPI ===== */
+let cpiData,cpiPeriod='all';
+async function initCPI(){cpiData=await loadJSON('cpi.json');renderCPI();setupTabs('cpiTabs',p=>{cpiPeriod=p;renderCPI();});}
+function renderCPI(){
+  const d=cpiData;
+  const headline=d.headline;const core=d.core;
+  const hChg=headline.prev_change;const cChg=core.prev_change;
+  const hChgStr=hChg>0?'▲ +'+hChg.toFixed(1)+'%p':hChg<0?'▼ '+hChg.toFixed(1)+'%p':'— 동일';
+  const cChgStr=cChg>0?'▲ +'+cChg.toFixed(1)+'%p':cChg<0?'▼ '+cChg.toFixed(1)+'%p':'— 동일';
+  const hCls=hChg>0?'dn':hChg<0?'up':'flat';
+  const cCls=cChg>0?'dn':cChg<0?'up':'flat';
+  const above2=headline.current>2;
+  document.getElementById('cpiStats').innerHTML=
+    '<div class="stat"><div class="stat-flag">📈</div><div class="stat-val '+(above2?'dn':'up')+'" style="font-size:20px;">'+headline.current+'%</div><div class="stat-chg '+hCls+'">'+hChgStr+'</div><div class="stat-sub">Headline CPI YoY</div></div>'+
+    '<div class="stat"><div class="stat-flag">🎯</div><div class="stat-val" style="color:var(--cyan);font-size:20px;">'+core.current+'%</div><div class="stat-chg '+cCls+'">'+cChgStr+'</div><div class="stat-sub">Core CPI YoY</div></div>'+
+    '<div class="stat"><div class="stat-flag">📅</div><div class="stat-val" style="color:var(--hv-text-secondary);font-size:14px;">'+d.latest_date+'</div><div class="stat-sub">최신 데이터</div></div>';
+  const f=filterMultiByPeriod(d.dates,{headline:d.series.headline,core:d.series.core},cpiPeriod);
+  const ctx=document.getElementById('cpiChart').getContext('2d');
+  if(charts.cpi)charts.cpi.destroy();
+  charts.cpi=new Chart(ctx,{type:'line',data:{labels:f.dates,datasets:[
+    {label:'Headline CPI',data:f.series.headline,borderColor:COLORS.red,tension:0.3},
+    {label:'Core CPI',data:f.series.core,borderColor:COLORS.cyan,tension:0.3}
+  ]},options:{plugins:{legend:{display:true,labels:{boxWidth:10,padding:12,font:{size:10},color:'#6e6e88'}}},scales:{x:baseScaleOpts,y:{...baseScaleOpts,ticks:{...baseScaleOpts.ticks,callback:v=>v+'%'}}}},
+  plugins:[{id:'target2',afterDraw(chart){const y=chart.scales.y.getPixelForValue(2);if(y<chart.chartArea.top||y>chart.chartArea.bottom)return;const ctx=chart.ctx;ctx.save();ctx.strokeStyle='rgba(255,214,66,0.3)';ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(chart.chartArea.left,y);ctx.lineTo(chart.chartArea.right,y);ctx.stroke();ctx.fillStyle='rgba(255,214,66,0.4)';ctx.font='9px JetBrains Mono';ctx.fillText('2% 타겟',chart.chartArea.right-48,y-5);ctx.restore();}}]});
+}
+
+/* ===== 2. US PPI ===== */
+let ppiData,ppiPeriod='all';
+async function initPPI(){ppiData=await loadJSON('ppi.json');renderPPI();setupTabs('ppiTabs',p=>{ppiPeriod=p;renderPPI();});}
+function renderPPI(){
+  const d=ppiData;
+  const headline=d.headline;const core=d.core;
+  const hChg=headline.prev_change;const cChg=core.prev_change;
+  const hChgStr=hChg>0?'▲ +'+hChg.toFixed(1)+'%p':hChg<0?'▼ '+hChg.toFixed(1)+'%p':'— 동일';
+  const cChgStr=cChg>0?'▲ +'+cChg.toFixed(1)+'%p':cChg<0?'▼ '+cChg.toFixed(1)+'%p':'— 동일';
+  const hCls=hChg>0?'dn':hChg<0?'up':'flat';
+  const cCls=cChg>0?'dn':cChg<0?'up':'flat';
+  document.getElementById('ppiStats').innerHTML=
+    '<div class="stat"><div class="stat-flag">🏭</div><div class="stat-val" style="color:var(--orange);font-size:20px;">'+headline.current+'%</div><div class="stat-chg '+hCls+'">'+hChgStr+'</div><div class="stat-sub">Headline PPI YoY</div></div>'+
+    '<div class="stat"><div class="stat-flag">🎯</div><div class="stat-val" style="color:var(--purple);font-size:20px;">'+core.current+'%</div><div class="stat-chg '+cCls+'">'+cChgStr+'</div><div class="stat-sub">Core PPI YoY</div></div>';
+  const f=filterMultiByPeriod(d.dates,{headline:d.series.headline,core:d.series.core},ppiPeriod);
+  const ctx=document.getElementById('ppiChart').getContext('2d');
+  if(charts.ppi)charts.ppi.destroy();
+  charts.ppi=new Chart(ctx,{type:'line',data:{labels:f.dates,datasets:[
+    {label:'Headline PPI',data:f.series.headline,borderColor:COLORS.orange,tension:0.3},
+    {label:'Core PPI',data:f.series.core,borderColor:COLORS.purple,tension:0.3}
+  ]},options:{plugins:{legend:{display:true,labels:{boxWidth:10,padding:12,font:{size:10},color:'#6e6e88'}}},scales:{x:baseScaleOpts,y:{...baseScaleOpts,ticks:{...baseScaleOpts.ticks,callback:v=>v+'%'}}}},
+  plugins:[{id:'line0ppi',afterDraw(chart){const y=chart.scales.y.getPixelForValue(0);if(y<chart.chartArea.top||y>chart.chartArea.bottom)return;const ctx=chart.ctx;ctx.save();ctx.strokeStyle='rgba(255,255,255,0.12)';ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(chart.chartArea.left,y);ctx.lineTo(chart.chartArea.right,y);ctx.stroke();ctx.fillStyle='rgba(255,74,106,0.3)';ctx.font='9px JetBrains Mono';ctx.fillText('디플레이션',chart.chartArea.right-52,y+12);ctx.restore();}}]});
+}
+
+/* ===== 3. CPI COMPONENTS ===== */
+let compData,compMode='bar';
+async function initComp(){compData=await loadJSON('cpi_components.json');renderComp();setupTabs('compTabs',m=>{compMode=m;renderComp();});}
+function renderComp(){
+  const d=compData;
+  const items=d.components;
+  var compIcons={Shelter:'🏠',Energy:'⚡',Food:'🍔',Transport:'🚗',Medical:'💊',Apparel:'👕',Education:'📚'};
+  var compKR={Shelter:'주거',Energy:'에너지',Food:'식품',Transport:'교통',Medical:'의료',Apparel:'의류',Education:'교육·통신'};
+  document.getElementById('compStats').innerHTML=items.map(function(it){
+    var chgStr=it.prev_change>0?'▲ +'+it.prev_change.toFixed(1)+'%p':it.prev_change<0?'▼ '+it.prev_change.toFixed(1)+'%p':'— 동일';
+    var chgCls=it.prev_change>0?'dn':it.prev_change<0?'up':'flat';
+    var valCls=it.current>0?'dn':'up';
+    return '<div class="stat" style="min-width:90px;flex:1"><div class="stat-flag">'+(compIcons[it.name]||'📊')+'</div><div class="stat-val '+valCls+'" style="font-size:16px;">'+it.current+'%</div><div class="stat-chg '+chgCls+'">'+chgStr+'</div><div class="stat-sub" style="font-size:12px;color:var(--hv-text-primary);font-weight:600;margin-top:3px;">'+(compKR[it.name]||it.name)+'</div></div>';
+  }).join('');
+  const ctx=document.getElementById('compChart').getContext('2d');
+  if(charts.comp)charts.comp.destroy();
+  if(compMode==='bar'){
+    const sortedItems=[...items].sort((a,b)=>b.current-a.current);
+    const barColors=sortedItems.map(it=>it.current>=0?hexToRGBA(COLORS.red,0.7):hexToRGBA(COLORS.cyan,0.7));
+    const borderColors=sortedItems.map(it=>it.current>=0?COLORS.red:COLORS.cyan);
+    charts.comp=new Chart(ctx,{type:'bar',data:{labels:sortedItems.map(it=>compKR[it.name]||it.name),datasets:[{data:sortedItems.map(it=>it.current),backgroundColor:barColors,borderColor:borderColors,borderWidth:1,borderRadius:4,barPercentage:0.7}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{...baseScaleOpts,ticks:{...baseScaleOpts.ticks,callback:v=>v+'%'}},y:{...baseScaleOpts,ticks:{...baseScaleOpts.ticks,font:{size:10},autoSkip:false}}}},
+    plugins:[{id:'line0comp',afterDraw(chart){const x=chart.scales.x.getPixelForValue(0);if(x<chart.chartArea.left||x>chart.chartArea.right)return;const ctx=chart.ctx;ctx.save();ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,chart.chartArea.top);ctx.lineTo(x,chart.chartArea.bottom);ctx.stroke();ctx.restore();}}]});
+  } else {
+    // line mode
+    const lineColors=[COLORS.red,COLORS.cyan,COLORS.orange,COLORS.yellow,COLORS.green,COLORS.purple,COLORS.blue];
+    charts.comp=new Chart(ctx,{type:'line',data:{labels:d.dates,datasets:items.map((it,i)=>({label:compKR[it.name]||it.name,data:it.series,borderColor:lineColors[i%lineColors.length],tension:0.3,borderWidth:1.5,spanGaps:true}))},options:{plugins:{legend:{display:true,labels:{boxWidth:8,padding:8,font:{size:9},color:'#6e6e88'}}},scales:{x:baseScaleOpts,y:{...baseScaleOpts,ticks:{...baseScaleOpts.ticks,callback:v=>v+'%'}}}}});
+  }
+}
+
+/* ===== 4. INFLATION EXPECTATIONS ===== */
+let expData,expPeriod='all';
+async function initExp(){expData=await loadJSON('inflation_expectations.json');renderExp();setupTabs('expTabs',p=>{expPeriod=p;renderExp();});}
+function renderExp(){
+  const d=expData;
+  const chg=d.prev_change;
+  const chgStr=chg>0?'▲ +'+chg.toFixed(2)+'%p':chg<0?'▼ '+chg.toFixed(2)+'%p':'— 동일';
+  const chgCls=chg>0?'dn':chg<0?'up':'flat';
+  document.getElementById('expStats').innerHTML=
+    '<div class="stat"><div class="stat-flag">📐</div><div class="stat-val" style="color:var(--yellow);font-size:20px;">'+d.current+'%</div><div class="stat-chg '+chgCls+'">'+chgStr+'</div><div class="stat-sub">5Y Breakeven Rate</div></div>'+
+    '<div class="stat"><div class="stat-flag">📅</div><div class="stat-val" style="color:var(--hv-text-secondary);font-size:14px;">'+d.latest_date+'</div><div class="stat-sub">최신 데이터</div></div>';
+  const f=filterByPeriod(d.dates,d.values,expPeriod);
+  const ctx=document.getElementById('expChart').getContext('2d');
+  if(charts.exp)charts.exp.destroy();
+  charts.exp=new Chart(ctx,{type:'line',data:{labels:f.dates,datasets:[{label:'5Y Breakeven',data:f.values,borderColor:COLORS.yellow,backgroundColor:hexToRGBA(COLORS.yellow,0.05),fill:true,tension:0.3}]},options:{plugins:{legend:{display:false}},scales:{x:baseScaleOpts,y:{...baseScaleOpts,ticks:{...baseScaleOpts.ticks,callback:v=>v+'%'}}}},
+  plugins:[{id:'target2exp',afterDraw(chart){const y=chart.scales.y.getPixelForValue(2);if(y<chart.chartArea.top||y>chart.chartArea.bottom)return;const ctx=chart.ctx;ctx.save();ctx.strokeStyle='rgba(255,214,66,0.3)';ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(chart.chartArea.left,y);ctx.lineTo(chart.chartArea.right,y);ctx.stroke();ctx.fillStyle='rgba(255,214,66,0.4)';ctx.font='9px JetBrains Mono';ctx.fillText('2% 타겟',chart.chartArea.right-48,y-5);ctx.restore();}}]});
+}
+
+/* ===== INIT ===== */
+async function init(){
+  try{
+    await Promise.all([initCPI(),initPPI(),initComp(),initExp()]);
+    injectShareBars();
+    document.getElementById('lastUpdate').textContent=new Date().toLocaleDateString('ko-KR');
+  }catch(e){
+    console.error('Dashboard init error:',e);
+  }
+  sendHeight();
+  window.addEventListener('resize',sendHeight);
+  new MutationObserver(sendHeight).observe(document.body,{childList:true,subtree:true});
+}
+var _lastH=0,_ht;
+function sendHeight(){clearTimeout(_ht);_ht=setTimeout(function(){var h=document.body.offsetHeight;if(Math.abs(h-_lastH)>5){_lastH=h;window.parent.postMessage({type:'resize',height:h},'*');}},150);}
+window.addEventListener('message',function(e){if(e.data&&e.data.type==='requestResize'){_lastH=0;sendHeight();}});
+init();
+</script>
+</body>
+</html>
