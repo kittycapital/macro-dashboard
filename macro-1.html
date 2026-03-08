@@ -2,316 +2,521 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>매크로 — 유동성 & 금융환경 | Herdvibe</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>외화증권 순매수 포지션 트래커 | HerdVibe</title>
+<meta property="og:title" content="외화증권 순매수 포지션 트래커 | HerdVibe">
+<meta property="og:description" content="한국 투자자 외화증권 TOP50 순매수 현황 및 포지션 변화 추적">
+<meta property="og:image" content="og-image.png">
+<meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Bebas+Neue&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.1/kakao.min.js" crossorigin="anonymous" async></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
-/* ===== HERDVIBE DESIGN TOKENS ===== */
 :root {
-  --hv-primary:#3b82f6;--hv-primary-light:#60a5fa;--hv-primary-dark:#2563eb;
-  --hv-primary-glow:rgba(59,130,246,0.12);
-  --hv-up:#22c55e;--hv-up-bg:rgba(34,197,94,0.1);
-  --hv-down:#ef4444;--hv-down-bg:rgba(239,68,68,0.1);
-  --hv-warning:#f59e0b;--hv-warning-bg:rgba(245,158,11,0.1);
-  --hv-neutral:#6b7280;
-  --hv-bg-base:#000;--hv-bg-surface:#0a0a0a;--hv-bg-card:#111;
-  --hv-bg-card-hover:#181818;--hv-bg-elevated:#1a1a1a;
-  --hv-text-primary:#e5e5e5;--hv-text-secondary:#8a8a8a;
-  --hv-text-tertiary:#555;--hv-text-muted:#3a3a3a;
-  --hv-border:rgba(255,255,255,0.06);--hv-border-strong:rgba(255,255,255,0.12);
-  --hv-font-display:'Plus Jakarta Sans',sans-serif;
-  --hv-font-body:'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif;
-  --hv-font-mono:'JetBrains Mono','SF Mono',monospace;
-  --hv-space-xs:8px;--hv-space-sm:12px;--hv-space-md:16px;
-  --hv-space-lg:24px;--hv-space-xl:32px;
-  --hv-radius-sm:6px;--hv-radius-md:10px;--hv-radius-lg:14px;
-  --hv-shadow-sm:0 1px 3px rgba(0,0,0,.5);--hv-shadow-lg:0 8px 32px rgba(0,0,0,.7);
-  --hv-transition-fast:150ms ease;--hv-transition:250ms ease;
-  --hv-max-width:1280px;--hv-header-height:60px;
-  --blue:#4a9eff;--cyan:#00e5cc;--red:#ff4a6a;--orange:#ff8c42;
-  --yellow:#ffd642;--green:#42ff8c;--purple:#a855f7;
+  --bg: #0a0a0a;
+  --bg-card: #111111;
+  --bg-hover: #1a1a1a;
+  --border: #222222;
+  --border-l: #333333;
+  --t1: #e8e8e8;
+  --t2: #888888;
+  --t3: #555555;
+  --cyan: #00d4ff;
+  --green: #00e676;
+  --red: #ff3d5a;
+  --orange: #ff9100;
+  --yellow: #ffd600;
+  --purple: #b388ff;
 }
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{font-size:16px;scroll-behavior:smooth;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-body{font-family:var(--hv-font-body);background:var(--hv-bg-base);color:var(--hv-text-primary);line-height:1.6;min-height:100vh;overflow-x:hidden}
-a{color:var(--hv-primary-light);text-decoration:none}
-::selection{background:var(--hv-primary);color:#fff}
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:var(--hv-bg-base)}
-::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--t1);line-height:1.6;min-height:100vh}
+.mono{font-family:'JetBrains Mono',monospace}
 
-/* HEADER */
-.hv-header{position:sticky;top:0;z-index:100;height:var(--hv-header-height);background:rgba(0,0,0,.9);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--hv-border);display:flex;align-items:center;padding:0 var(--hv-space-lg)}
-.hv-header-inner{width:100%;max-width:var(--hv-max-width);margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:var(--hv-space-md)}
-.hv-logo{display:flex;align-items:center;gap:10px;font-family:var(--hv-font-display);font-weight:800;font-size:1.15rem;color:var(--hv-text-primary);text-decoration:none;white-space:nowrap;letter-spacing:-.02em}
-.hv-logo-mark{width:28px;height:28px;background:linear-gradient(135deg,var(--hv-primary),#6366f1);border-radius:7px;flex-shrink:0}
-.hv-header-center{display:flex;flex-direction:column;min-width:0;flex:1;align-items:center}
-.hv-header-center h1{font-family:var(--hv-font-display);font-size:.938rem;font-weight:600;color:var(--hv-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hv-header-category{font-size:.7rem;color:var(--hv-text-tertiary);font-weight:500;text-transform:uppercase;letter-spacing:.08em}
-.hv-header-right{display:flex;align-items:center;gap:var(--hv-space-xs);flex-shrink:0}
-.hv-update-badge{font-family:var(--hv-font-mono);font-size:.688rem;color:var(--hv-text-tertiary);white-space:nowrap;display:flex;align-items:center;gap:6px}
-.hv-live-dot{width:5px;height:5px;background:var(--hv-up);border-radius:50%;animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+/* ─── Header ─── */
+.hdr{padding:24px 20px 0;max-width:1400px;margin:0 auto;text-align:center}
+.hdr-top{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;margin-bottom:8px}
+.hdr h1{font-size:22px;font-weight:900;letter-spacing:-.5px;color:var(--t1)}
+.badge-up{font-size:12px;color:var(--t3);font-family:'JetBrains Mono',monospace;background:var(--bg-card);padding:4px 10px;border-radius:4px;border:1px solid var(--border)}
+.hdr-sub{font-size:13px;color:var(--t2);margin-bottom:20px}
 
-/* PAGE + GRID */
-.hv-page{max-width:var(--hv-max-width);margin:0 auto;padding:var(--hv-space-lg)}
-.dash-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
-.card{background:var(--hv-bg-card);border:1px solid var(--hv-border);border-radius:var(--hv-radius-lg);padding:18px 20px 16px;position:relative;overflow:visible;animation:fadeUp .5s ease both}
-.card:nth-child(1){animation-delay:.05s}.card:nth-child(2){animation-delay:.08s}
-.card:nth-child(3){animation-delay:.11s}.card:nth-child(4){animation-delay:.14s}
-@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-.card-label{font-family:var(--hv-font-mono);font-size:10px;font-weight:500;color:var(--hv-text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;text-align:center}
-.card-title{font-size:15px;font-weight:700;margin-bottom:2px;display:flex;align-items:center;justify-content:center;gap:7px}
-.card-desc{font-size:11.5px;color:var(--hv-text-secondary);margin-bottom:14px;line-height:1.5;text-align:center}
+/* ─── Tabs ─── */
+.tab-row{display:flex;gap:0;margin-bottom:16px;max-width:1400px;margin-left:auto;margin-right:auto;padding:0 20px;flex-wrap:wrap;justify-content:center}
+.tg{display:flex;background:var(--bg-card);border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.tg+.tg{margin-left:16px}
+.tb{padding:8px 16px;font-size:13px;font-weight:500;color:var(--t2);background:transparent;border:none;cursor:pointer;transition:all .2s;font-family:'Noto Sans KR',sans-serif;white-space:nowrap}
+.tb:hover{color:var(--t1);background:var(--bg-hover)}
+.tb.on{color:var(--bg);background:var(--cyan);font-weight:700}
+.tb.on-c{color:var(--bg);background:var(--yellow);font-weight:700}
 
-/* TABS */
-.tabs{display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap}
-.tab{padding:5px 12px;border-radius:6px;font-family:var(--hv-font-mono);font-size:10.5px;font-weight:500;color:var(--hv-text-muted);background:transparent;border:1px solid transparent;cursor:pointer;transition:all .2s;user-select:none}
-.tab:hover{color:var(--hv-text-secondary);background:rgba(255,255,255,.03)}
-.tab.active{color:var(--cyan);background:rgba(0,229,204,.08);border-color:rgba(0,229,204,.2)}
+/* ─── Summary ─── */
+.sum-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:1400px;margin:0 auto 20px;padding:0 20px}
+.sum{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center}
+.sum .lb{font-size:12px;color:var(--t2);margin-bottom:6px;font-weight:500}
+.sum .vl{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;line-height:1.2}
+.sum .sb{font-size:11px;color:var(--t3);margin-top:4px}
+.sum.s-g .vl{color:var(--green)}.sum.s-r .vl{color:var(--red)}
+.sum.s-c .vl{color:var(--cyan)}.sum.s-o .vl{color:var(--orange)}
 
-/* STATS */
-.stats{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
-.stat{background:rgba(255,255,255,.02);border:1px solid var(--hv-border);border-radius:8px;padding:10px 14px;min-width:0;flex:1}
-.stat-flag{font-size:16px;margin-bottom:2px}
-.stat-val{font-family:var(--hv-font-mono);font-size:20px;font-weight:700;line-height:1.2}
-.stat-sub{font-size:10px;color:var(--hv-text-secondary);margin-top:1px}
-.stat-chg{font-family:var(--hv-font-mono);font-size:11px;font-weight:600;margin-top:2px}
-.up{color:var(--green)}.dn{color:var(--red)}.flat{color:var(--hv-text-muted)}
+/* ─── Main ─── */
+.main{max-width:1400px;margin:0 auto;padding:0 20px 40px}
 
-/* CHART */
-.chart-wrap{position:relative;width:100%;height:220px}
-.chart-wrap canvas{width:100%!important;height:100%!important}
+/* ─── Highlights ─── */
+.hl-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:20px}
+.hl{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px}
+.hl h3{font-size:14px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.dot-g{background:var(--green)}.dot-r{background:var(--red)}
+.dot-c{background:var(--cyan)}.dot-o{background:var(--orange)}
+.hl-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.hl-item:last-child{border-bottom:none}
+.hl-item .nm{font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hl-item .dt{font-family:'JetBrains Mono',monospace;font-size:12px;margin-left:12px;white-space:nowrap}
+.empty{color:var(--t3);font-size:13px;padding:12px 0;text-align:center}
 
-/* GRID SPANS */
-.s12{grid-column:span 12}.s8{grid-column:span 8}.s7{grid-column:span 7}
-.s6{grid-column:span 6}.s5{grid-column:span 5}.s4{grid-column:span 4}
+/* ─── Chart ─── */
+.chart-sec{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px}
+.chart-sec h2{font-size:15px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px}
+.chart-wrap{position:relative;width:100%;height:800px}
 
-/* YIELD CURVE */
-.yc-legend{display:flex;gap:16px;margin-bottom:8px;flex-wrap:wrap}
-.yc-leg{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--hv-text-secondary)}
-.yc-dot{width:10px;height:3px;border-radius:2px}
-.spread-box{display:flex;gap:12px;margin-top:10px;flex-wrap:wrap}
-.spread-item{display:flex;align-items:center;gap:6px}
-.spread-val{font-family:var(--hv-font-mono);font-size:13px;font-weight:600}
-.spread-name{font-size:10px;color:var(--hv-text-secondary)}
-.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-family:var(--hv-font-mono);font-size:9.5px;font-weight:600}
-.badge-red{background:rgba(255,74,106,.1);color:var(--red)}
-.badge-green{background:rgba(66,255,140,.1);color:var(--green)}
-.badge-blue{background:rgba(74,158,255,.1);color:var(--blue)}
-.badge-yellow{background:rgba(255,214,66,.1);color:var(--yellow)}
+/* ─── Table ─── */
+.tbl-sec{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;overflow-x:auto}
+.tbl-sec h2{font-size:15px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;padding:10px 12px;border-bottom:2px solid var(--border-l);color:var(--t2);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+th.r{text-align:right}th.c{text-align:center}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
+tbody tr:hover{background:var(--bg-hover)}
+tbody td{padding:10px 12px;vertical-align:middle}
+.rk{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;width:40px;text-align:center}
+.rk.t3{color:var(--yellow)}
+.fl{display:inline-block;width:20px;text-align:center;font-size:14px}
+.sn{font-weight:500;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ic{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t3)}
+.amt{font-family:'JetBrains Mono',monospace;text-align:right;white-space:nowrap}
+.amt.pos{color:var(--green)}.amt.neg{color:var(--red)}
+.chg{text-align:center;white-space:nowrap}
+.bdg{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace}
+.bdg.new{background:rgba(0,230,118,.15);color:var(--green);border:1px solid rgba(0,230,118,.3)}
+.bdg.up{color:var(--green)}.bdg.dn{color:var(--red)}.bdg.eq{color:var(--t3)}
 
-/* INTERPRETATION */
-.interp{margin-top:12px;padding:10px 14px;border-radius:8px;font-size:11.5px;line-height:1.5}
-.interp-green{background:rgba(66,255,140,.05);border:1px solid rgba(66,255,140,.12);color:var(--green)}
-.interp-red{background:rgba(255,74,106,.05);border:1px solid rgba(255,74,106,.12);color:var(--red)}
-.interp strong{font-weight:700}
+/* ─── Watermark ─── */
+.wm{text-align:center;padding:20px;color:var(--t3);font-size:11px}
+.wm a{color:var(--cyan);text-decoration:none}
 
-/* SHARE BAR */
-.share-bar{display:flex;align-items:center;justify-content:space-between;padding:12px var(--hv-space-lg);border-top:1px solid var(--hv-border);background:var(--hv-bg-surface);border-radius:0 0 var(--hv-radius-lg) var(--hv-radius-lg)}
-.share-bar-preview{font-size:.75rem;color:var(--hv-text-tertiary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:50%;line-height:1.4;font-family:var(--hv-font-mono)}
-.share-bar-preview span{color:var(--hv-text-secondary);font-weight:500}
+/* ─── Share Bar ─── */
+.share-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid var(--border);background:var(--bg-card);border-radius:0 0 12px 12px}
+.share-bar-preview{font-size:.75rem;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:50%;line-height:1.4;font-family:'JetBrains Mono',monospace}
+.share-bar-preview span{color:var(--t2);font-weight:500}
 .share-bar-buttons{display:flex;align-items:center;gap:6px;flex-shrink:0}
-.share-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;font-size:.75rem;font-weight:600;font-family:var(--hv-font-body);cursor:pointer;transition:all var(--hv-transition-fast);border:1px solid var(--hv-border-strong);background:var(--hv-bg-card);color:#999;white-space:nowrap}
-.share-btn:hover{transform:translateY(-1px);box-shadow:var(--hv-shadow-sm);color:var(--hv-text-primary)}
+.share-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;font-size:.75rem;font-weight:600;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all .2s;border:1px solid var(--border-l);background:var(--bg-card);color:#999;white-space:nowrap}
+.share-btn:hover{transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,.3);color:var(--t1)}
 .share-btn svg{flex-shrink:0}
 .share-btn--x:hover{border-color:#fff;color:#fff;background:#111}
 .share-btn--kakao:hover{border-color:#FEE500;color:#191919;background:#FEE500}
 .share-btn--tg:hover{border-color:#26A5E4;color:#fff;background:rgba(38,165,228,.15)}
-.share-btn--copy:hover{border-color:var(--hv-primary);color:var(--hv-primary-light);background:var(--hv-primary-glow)}
+.share-btn--copy:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,.08)}
 
-/* TOAST */
+/* ─── Toast ─── */
 .toast-wrap{position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px}
-.toast{background:var(--hv-bg-elevated);border:1px solid var(--hv-border-strong);border-radius:var(--hv-radius-md);padding:10px 18px;font-size:.788rem;color:var(--hv-text-primary);box-shadow:var(--hv-shadow-lg);animation:toastIn .3s ease;border-left:3px solid var(--hv-up)}
+.toast{background:var(--bg-card);border:1px solid var(--border-l);border-radius:8px;padding:10px 18px;font-size:.788rem;color:var(--t1);box-shadow:0 4px 20px rgba(0,0,0,.4);animation:toastIn .3s ease;border-left:3px solid var(--green)}
 @keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 
-/* RESPONSIVE */
-@media(max-width:1024px){
-  .s8,.s7,.s6,.s5,.s4{grid-column:span 12}
-}
+/* ─── Loading ─── */
+.loading{text-align:center;padding:60px 20px;color:var(--t2);font-size:14px}
+.loading .spin{display:inline-block;width:20px;height:20px;border:2px solid var(--border-l);border-top-color:var(--cyan);border-radius:50%;animation:sp .6s linear infinite;margin-right:8px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* ─── Responsive ─── */
 @media(max-width:768px){
-  :root{--hv-header-height:52px}
-  .hv-page{padding:var(--hv-space-md)}
-  .hv-header{padding:0 var(--hv-space-md)}
-  .hv-update-badge{display:none}
-  .dash-grid{gap:10px}
-  .card{padding:14px 14px 12px}
-  .stats{gap:6px}
-  .stat{padding:8px 10px}
-  .stat-val{font-size:16px}
-  .card-title{font-size:14px}
-  .chart-wrap{height:200px}
+  .hdr h1{font-size:18px}
+  .sum-row{grid-template-columns:repeat(2,1fr);gap:8px}
+  .sum .vl{font-size:22px}
+  .tab-row{flex-wrap:wrap;gap:8px}
+  .tg+.tg{margin-left:0}
+  .tb{padding:6px 10px;font-size:12px}
+  .hl-grid{grid-template-columns:1fr}
+  .chart-wrap{height:600px}
+  .sn{max-width:140px}
+  table{font-size:12px}
+  thead th,tbody td{padding:8px 6px}
   .share-bar{flex-direction:column;gap:10px;align-items:stretch}
   .share-bar-preview{max-width:100%}
   .share-bar-buttons{justify-content:center;flex-wrap:wrap}
   .share-btn span.label-text{display:none}
   .share-btn{padding:8px 10px}
 }
-@media(max-width:520px){.hv-page{padding:12px 10px 24px}}
+@media(max-width:480px){
+  .hdr{padding:16px 12px 0}
+  .tab-row,.sum-row,.main{padding-left:12px;padding-right:12px}
+  .chart-wrap{height:500px}
+}
 </style>
 </head>
 <body>
 
-<header class="hv-header">
-  <div class="hv-header-inner">
-    
-    <div class="hv-header-center">
-      <h1>매크로 — 유동성 & 금융환경</h1>
-      <span class="hv-header-category">Macro · Liquidity</span>
+<div class="hdr">
+  <div class="hdr-top">
+    <h1>외화증권 순매수 포지션 트래커</h1>
+  </div>
+  <span class="badge-up" id="updateDate">loading...</span>
+  <p class="hdr-sub">한국 투자자 외화증권 결제내역 TOP50 · 순매수 포지션 변화 추적 · 출처: 세이브로(SEIBro)</p>
+</div>
+
+<!-- Tabs -->
+<div class="tab-row">
+  <div class="tg" id="pTabs">
+    <button class="tb on" data-p="1W">주간 비교</button>
+    <button class="tb" data-p="1M">월간 비교</button>
+  </div>
+  <div class="tg" id="cTabs">
+    <button class="tb on-c" data-c="전체">전체</button>
+    <button class="tb" data-c="미국">🇺🇸 미국</button>
+    <button class="tb" data-c="홍콩">🇭🇰 홍콩</button>
+    <button class="tb" data-c="중국">🇨🇳 중국</button>
+    <button class="tb" data-c="일본">🇯🇵 일본</button>
+    <button class="tb" data-c="베트남">🇻🇳 베트남</button>
+  </div>
+</div>
+
+<!-- Summary -->
+<div class="sum-row">
+  <div class="sum s-g"><div class="lb">신규 진입</div><div class="vl" id="sNew">-</div><div class="sb">이전 기간 대비</div></div>
+  <div class="sum s-r"><div class="lb">TOP50 이탈</div><div class="vl" id="sExit">-</div><div class="sb">이전 기간 대비</div></div>
+  <div class="sum s-c"><div class="lb">순위 상승 (5↑ 이상)</div><div class="vl" id="sUp">-</div><div class="sb">큰 폭 상승</div></div>
+  <div class="sum s-o"><div class="lb">순위 하락 (5↓ 이상)</div><div class="vl" id="sDn">-</div><div class="sb">큰 폭 하락</div></div>
+</div>
+
+<!-- Content -->
+<div class="main">
+  <div id="loadingMsg" class="loading"><span class="spin"></span>데이터 로딩 중...</div>
+
+  <div id="content" style="display:none">
+    <!-- Highlights -->
+    <div class="hl-grid">
+      <div class="hl"><h3><span class="dot dot-g"></span> 신규 진입 종목</h3><div id="hlNew"></div></div>
+      <div class="hl"><h3><span class="dot dot-r"></span> 이탈 종목</h3><div id="hlExit"></div></div>
+      <div class="hl"><h3><span class="dot dot-c"></span> 순위 급상승 TOP5</h3><div id="hlUp"></div></div>
+      <div class="hl"><h3><span class="dot dot-o"></span> 순위 급하락 TOP5</h3><div id="hlDn"></div></div>
     </div>
-    <div class="hv-header-right">
-      <div class="hv-update-badge"><span class="hv-live-dot"></span><span id="lastUpdate">업데이트 중...</span></div>
+
+    <!-- Chart -->
+    <div class="chart-sec">
+      <h2>순매수 결제금액 TOP30 (단위: USD)</h2>
+      <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+    </div>
+
+    <!-- Table -->
+    <div class="tbl-sec">
+      <h2>상세 데이터 TOP50</h2>
+      <table>
+        <thead><tr>
+          <th class="c">순위</th><th class="c">변동</th><th>국가</th><th>종목명</th>
+          <th>티커</th><th>종목코드</th><th class="r">매수결제</th><th class="r">매도결제</th>
+          <th class="r">순매수결제</th><th class="r">순매수 변화</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
     </div>
   </div>
-</header>
+</div>
 
-<div class="hv-page">
-  <div class="dash-grid">
-
-    <!-- 1. Global M2 -->
-    <div class="card s8" id="m2Card">
-      <div class="card-label">GLOBAL LIQUIDITY</div>
-      <div class="card-title">💧 글로벌 M2 통화량</div>
-      <div class="card-desc">전세계 중앙은행이 공급한 유동성 총량. M2 증가 → 자산시장 상승 압력</div>
-      <div class="tabs" id="m2ModeTabs">
-        <div class="tab active" data-mode="total">합산</div>
-        <div class="tab" data-mode="countries">국가별 YoY%</div>
-      </div>
-      <div class="tabs" id="m2Tabs">
-        <div class="tab" data-period="1y">1Y</div>
-        <div class="tab" data-period="3y">3Y</div>
-        <div class="tab active" data-period="5y">5Y</div>
-        <div class="tab" data-period="all">ALL</div>
-      </div>
-      <div class="stats" id="m2Stats"></div>
-      <div class="chart-wrap"><canvas id="m2Chart" height="200"></canvas></div>
-    </div>
-
-    <!-- 2. Fed Balance Sheet -->
-    <div class="card s4" id="fedCard">
-      <div class="card-label">FED BALANCE SHEET</div>
-      <div class="card-title">🏛️ 연준 대차대조표</div>
-      <div class="card-desc">연준이 보유한 자산 규모. 줄면 긴축(QT), 늘면 완화(QE)</div>
-      <div class="tabs" id="fedTabs">
-        <div class="tab" data-period="1y">1Y</div>
-        <div class="tab" data-period="3y">3Y</div>
-        <div class="tab active" data-period="5y">5Y</div>
-        <div class="tab" data-period="all">ALL</div>
-      </div>
-      <div class="stats" id="fedStats"></div>
-      <div class="chart-wrap"><canvas id="fedChart" height="180"></canvas></div>
-    </div>
-
-    <!-- 3. Yield Curve -->
-    <div class="card s6" id="ycCard">
-      <div class="card-label">US TREASURY YIELD CURVE</div>
-      <div class="card-title">📐 미국 일드커브</div>
-      <div class="card-desc">미국 국채 만기별 금리. 역전(단기>장기) 시 경기침체 신호</div>
-      <div class="yc-legend">
-        <div class="yc-leg"><div class="yc-dot" style="background:var(--orange)"></div>현재</div>
-        <div class="yc-leg"><div class="yc-dot" style="background:var(--purple);opacity:.5"></div>1년 전</div>
-      </div>
-      <div class="chart-wrap"><canvas id="ycChart" height="200"></canvas></div>
-      <div class="spread-box" id="ycSpreads"></div>
-    </div>
-
-    <!-- 4. NFCI -->
-    <div class="card s6" id="nfciCard">
-      <div class="card-label">CHICAGO FED NFCI</div>
-      <div class="card-title">🌡️ 금융상황지수</div>
-      <div class="card-desc">시카고연준 NFCI. 0 이상이면 긴축적, 이하면 완화적 금융환경</div>
-      <div class="tabs" id="nfciTabs">
-        <div class="tab" data-period="1y">1Y</div>
-        <div class="tab active" data-period="3y">3Y</div>
-        <div class="tab" data-period="5y">5Y</div>
-        <div class="tab" data-period="all">ALL</div>
-      </div>
-      <div class="stats" id="nfciStats"></div>
-      <div class="chart-wrap"><canvas id="nfciChart" height="200"></canvas></div>
-      <div class="interp" id="nfciInterp"></div>
-    </div>
-
-  </div>
-
-  <!-- SHARE BAR -->
-  <div style="background:var(--hv-bg-card);border:1px solid var(--hv-border);border-radius:var(--hv-radius-lg);margin-top:var(--hv-space-lg);overflow:hidden">
+<!-- SHARE BAR -->
+<div style="max-width:1400px;margin:0 auto;padding:0 20px">
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;margin-top:20px;overflow:hidden">
     <div class="share-bar" style="border-top:none">
-      <div class="share-bar-preview"><span>매크로 — 유동성 & 금융환경</span> — herdvibe.com</div>
+      <div class="share-bar-preview"><span>외화증권 순매수 포지션 트래커</span> — herdvibe.com</div>
       <div class="share-bar-buttons">
         <button class="share-btn share-btn--x" onclick="doShare('twitter')"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg><span class="label-text">트위터</span></button>
         <button class="share-btn share-btn--kakao" onclick="doShare('kakao')"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.477 3 2 6.463 2 10.691c0 2.724 1.8 5.112 4.508 6.458l-1.148 4.265a.5.5 0 0 0 .764.533l4.94-3.26c.304.02.612.03.936.03 5.523 0 10-3.462 10-7.735C22 6.463 17.523 3 12 3z"/></svg><span class="label-text">카카오톡</span></button>
         <button class="share-btn share-btn--tg" onclick="doShare('telegram')"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg><span class="label-text">텔레그램</span></button>
-        <button class="share-btn" onclick="doShare('instagram',this)" style="border-color:var(--hv-border-strong)"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg><span class="label-text">인스타</span></button>
+        <button class="share-btn" onclick="doShare('instagram',this)" style="border-color:var(--border-l)"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg><span class="label-text">인스타</span></button>
         <button class="share-btn share-btn--copy" onclick="doShare('link',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span class="label-text">링크 복사</span></button>
       </div>
     </div>
   </div>
 </div>
 
+<div class="wm">출처: 한국예탁결제원 세이브로(SEIBro) · <a href="https://herdvibe.com" target="_blank">herdvibe.com</a></div>
+
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.6.0/kakao.min.js"></script>
+
 <script>
-/* ===== SHARE & TOAST (원본 그대로) ===== */
-var SHARE_URL = 'https://herdvibe.com/30';
+/* ─── SHARE & TOAST ─── */
+var SHARE_URL = 'https://herdvibe.com/120';
 function ensureKakao(){try{if(typeof Kakao!=='undefined'&&!Kakao.isInitialized())Kakao.init('a43ed7b39fac35458f4f9df925a279b5');return typeof Kakao!=='undefined'&&Kakao.isInitialized();}catch(e){return false;}}
 ensureKakao();
-function kakaoShare(title,desc){if(!ensureKakao()){copyToClipboard(SHARE_URL);toast('링크 복사완료! 카카오톡에 붙여넣기 하세요');return;}try{Kakao.Share.sendDefault({objectType:'feed',content:{title:title||'매크로 — 유동성 & 금융환경',description:desc||'M2 통화량, 연준 대차대조표, 일드커브, NFCI 실시간 분석',imageUrl:'https://raw.githubusercontent.com/kittycapital/kittycapital.github.io/main/assets/herdvibe-og.png',link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}},buttons:[{title:'대시보드 보기',link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}}]});}catch(e){copyToClipboard(SHARE_URL);toast('링크 복사완료! 카카오톡에 붙여넣기 하세요');}}
-function copyToClipboard(text){try{window.parent.postMessage({type:'clipboard',text:text},'*');}catch(e){}}
+function kakaoShare(){if(!ensureKakao()){copyToClipboard(SHARE_URL);toast('링크 복사완료! 카카오톡에 붙여넣기 하세요');return;}try{Kakao.Share.sendDefault({objectType:'feed',content:{title:'외화증권 순매수 포지션 트래커',description:'한국 투자자 외화증권 TOP50 순매수 현황 및 포지션 변화 추적',imageUrl:'https://raw.githubusercontent.com/kittycapital/kittycapital.github.io/main/assets/herdvibe-og.png',link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}},buttons:[{title:'대시보드 보기',link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}}]});}catch(e){copyToClipboard(SHARE_URL);toast('링크 복사완료! 카카오톡에 붙여넣기 하세요');}}
+function copyToClipboard(text){try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).catch(function(){fallbackCopy(text);});}else{fallbackCopy(text);}}catch(e){fallbackCopy(text);}}
+function fallbackCopy(text){try{window.parent.postMessage({type:'clipboard',text:text},'*');}catch(e){}try{var ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;left:-9999px';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);}catch(e){}}
 function flashCopied(btn){if(!btn)return;var orig=btn.innerHTML;btn.style.background='#22c55e';btn.style.color='#fff';btn.style.borderColor='#22c55e';var hasLabel=btn.querySelector('.label-text');btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg>'+(hasLabel?'<span class="label-text" style="color:#fff">복사됨!</span>':'');setTimeout(function(){btn.style.background='';btn.style.color='';btn.style.borderColor='';btn.innerHTML=orig;},2000);}
-function doShare(p,btn){var u=SHARE_URL;var t=encodeURIComponent('매크로 — 유동성 & 금융환경 | herdvibe.com');var eu=encodeURIComponent(u);switch(p){case'twitter':window.open('https://twitter.com/intent/tweet?text='+t+'&url='+eu,'_blank');break;case'telegram':window.open('https://t.me/share/url?url='+eu+'&text='+t,'_blank');break;case'kakao':kakaoShare();break;case'instagram':copyToClipboard(u);flashCopied(btn);toast('링크 복사완료! 인스타그램에 붙여넣기 하세요');break;case'link':copyToClipboard(u);flashCopied(btn);toast('링크가 복사되었습니다 ✓');break;}}
-var CARD_SHARE_INFO={m2Card:'글로벌 M2 통화량 — 전세계 유동성 추적',fedCard:'연준 대차대조표 — QE/QT 모니터링',ycCard:'미국 일드커브 — 경기침체 신호 분석',nfciCard:'NFCI 금융상황지수 — 긴축/완화 판단'};
-function doCardShare(cardId,p,btn){var u=SHARE_URL;var info=CARD_SHARE_INFO[cardId]||'매크로 대시보드';var t=encodeURIComponent(info+' | herdvibe.com');var eu=encodeURIComponent(u);switch(p){case'twitter':window.open('https://twitter.com/intent/tweet?text='+t+'&url='+eu,'_blank');break;case'telegram':window.open('https://t.me/share/url?url='+eu+'&text='+t,'_blank');break;case'kakao':kakaoShare(info);break;case'instagram':copyToClipboard(u);flashCopied(btn);toast('링크 복사완료! 인스타그램에 붙여넣기 하세요');break;case'link':copyToClipboard(u);flashCopied(btn);toast('링크가 복사되었습니다 ✓');break;}}
-function makeShareBar(cardId){var igSvg='<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>';return '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid var(--hv-border)"><div style="font-family:var(--hv-font-mono);font-size:.65rem;color:var(--hv-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;margin-right:8px">herdvibe.com</div><div style="display:flex;gap:4px;flex-shrink:0"><button class="share-btn" onclick="doCardShare(\''+cardId+'\',\'twitter\')" style="padding:6px 8px;border-radius:5px" title="X"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></button><button class="share-btn" onclick="doCardShare(\''+cardId+'\',\'kakao\')" style="padding:6px 8px;border-radius:5px" title="카카오"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.477 3 2 6.463 2 10.691c0 2.724 1.8 5.112 4.508 6.458l-1.148 4.265a.5.5 0 0 0 .764.533l4.94-3.26c.304.02.612.03.936.03 5.523 0 10-3.462 10-7.735C22 6.463 17.523 3 12 3z"/></svg></button><button class="share-btn" onclick="doCardShare(\''+cardId+'\',\'telegram\')" style="padding:6px 8px;border-radius:5px" title="텔레그램"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg></button><button class="share-btn" onclick="doCardShare(\''+cardId+'\',\'instagram\',this)" style="padding:6px 8px;border-radius:5px" title="인스타">'+igSvg+'</button><button class="share-btn" onclick="doCardShare(\''+cardId+'\',\'link\',this)" style="padding:6px 8px;border-radius:5px" title="링크복사"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button></div></div>';}
-function injectShareBars(){Object.keys(CARD_SHARE_INFO).forEach(function(id){var el=document.getElementById(id);if(el)el.insertAdjacentHTML('beforeend',makeShareBar(id));});}
-function toast(msg){var c=document.querySelector('.toast-wrap');if(!c){c=document.createElement('div');c.className='toast-wrap';document.body.appendChild(c)}var t=document.createElement('div');t.className='toast';t.textContent=msg;c.appendChild(t);setTimeout(function(){t.style.opacity='0';t.style.transform='translateY(12px)';t.style.transition='.3s';setTimeout(function(){t.remove()},300)},3000)}
+function doShare(p,btn){var u=SHARE_URL;var t=encodeURIComponent('외화증권 순매수 포지션 트래커 | herdvibe.com');var eu=encodeURIComponent(u);switch(p){case'twitter':window.open('https://twitter.com/intent/tweet?text='+t+'&url='+eu,'_blank');break;case'telegram':window.open('https://t.me/share/url?url='+eu+'&text='+t,'_blank');break;case'kakao':kakaoShare();break;case'instagram':copyToClipboard(u);flashCopied(btn);toast('링크 복사완료! 인스타그램에 붙여넣기 하세요');break;case'link':copyToClipboard(u);flashCopied(btn);toast('링크가 복사되었습니다 ✓');break;}}
+function toast(msg){var c=document.querySelector('.toast-wrap');if(!c){c=document.createElement('div');c.className='toast-wrap';document.body.appendChild(c);}var t=document.createElement('div');t.className='toast';t.textContent=msg;c.appendChild(t);setTimeout(function(){t.style.opacity='0';t.style.transform='translateY(12px)';t.style.transition='.3s';setTimeout(function(){t.remove();},300);},3000);}
 
-/* ===== WATERMARK ===== */
-var watermarkPlugin={id:'herdvibeWatermark',beforeDraw:function(ch){var ctx=ch.ctx,ca=ch.chartArea;if(!ca)return;ctx.save();ctx.font='700 28px "Plus Jakarta Sans",sans-serif';ctx.fillStyle='rgba(255,255,255,0.03)';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('Herdvibe.com',(ca.left+ca.right)/2,(ca.top+ca.bottom)/2);ctx.restore()}};
-Chart.register(watermarkPlugin);
+/* ─── State ─── */
+let DATA = null;
+let period = '1W';
+let country = '전체';
+let chart = null;
 
-/* ===== CHART SETUP (원본 그대로) ===== */
-const DATA_BASE='data/';
-const COLORS={blue:'#4a9eff',cyan:'#00e5cc',red:'#ff4a6a',orange:'#ff8c42',yellow:'#ffd642',green:'#42ff8c',purple:'#a855f7',us:'#4a9eff',kr:'#00e5cc',eu:'#ffd642',jp:'#ff8c42',cn:'#ff4a6a'};
-Chart.defaults.font.family="'JetBrains Mono','Noto Sans KR',monospace";
-Chart.defaults.font.size=10;Chart.defaults.color='#3a3a52';
-Chart.defaults.plugins.legend.display=false;
-Chart.defaults.elements.point.radius=0;Chart.defaults.elements.point.hoverRadius=4;
-Chart.defaults.elements.line.borderWidth=2;Chart.defaults.animation.duration=600;
-Chart.defaults.responsive=true;Chart.defaults.maintainAspectRatio=false;
-const gridColor='rgba(255,255,255,0.04)';
-const baseScaleOpts={grid:{color:gridColor,drawBorder:false},ticks:{maxTicksLimit:6,padding:6,font:{size:9}}};
-function hexToRGBA(hex,a){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return`rgba(${r},${g},${b},${a})`;}
-function filterByPeriod(dates,values,period){if(period==='all')return{dates,values};var map={'1m':1,'3m':3,'6m':6,'1y':12,'3y':36,'5y':60,'10y':120,'20y':240};var months=map[period]||60;var now=new Date();var cutY=now.getFullYear(),cutM=now.getMonth()-months;while(cutM<0){cutM+=12;cutY--;}var cutStr=cutY+'-'+String(cutM+1).padStart(2,'0')+'-01';var filtered=dates.reduce((acc,d,i)=>{if(d>=cutStr){acc.dates.push(d);acc.values.push(values[i]);}return acc;},{dates:[],values:[]});return filtered;}
-function filterMultiByPeriod(dates,seriesObj,period){if(period==='all')return{dates,series:seriesObj};var map={'1m':1,'3m':3,'6m':6,'1y':12,'3y':36,'5y':60,'10y':120,'20y':240};var months=map[period]||60;var now=new Date();var cutY=now.getFullYear(),cutM=now.getMonth()-months;while(cutM<0){cutM+=12;cutY--;}var cutStr=cutY+'-'+String(cutM+1).padStart(2,'0')+'-01';var out={dates:[],series:{}};Object.keys(seriesObj).forEach(k=>out.series[k]=[]);dates.forEach((d,i)=>{if(d>=cutStr){out.dates.push(d);Object.keys(seriesObj).forEach(k=>out.series[k].push(seriesObj[k][i]));}});return out;}
-async function loadJSON(file){const r=await fetch(DATA_BASE+file);return r.json();}
-function setupTabs(containerId,callback){const c=document.getElementById(containerId);if(!c)return;c.querySelectorAll('.tab').forEach(t=>{t.addEventListener('click',()=>{c.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');callback(t.dataset.period||t.dataset.mode);});});}
-const charts={};
+const FLAGS = {'미국':'🇺🇸','홍콩':'🇭🇰','중국':'🇨🇳','일본':'🇯🇵','베트남':'🇻🇳'};
 
-/* ===== 1. GLOBAL M2 (원본 그대로) ===== */
-let m2Data,m2Mode='total',m2Period='5y';
-async function initM2(){m2Data=await loadJSON('m2.json');renderM2();setupTabs('m2ModeTabs',m=>{m2Mode=m;renderM2();});setupTabs('m2Tabs',p=>{m2Period=p;renderM2();});}
-function renderM2(){const d=m2Data;const sh=document.getElementById('m2Stats');if(m2Mode==='total'){sh.innerHTML=`<div class="stat"><div class="stat-val" style="color:var(--cyan)">$${d.total.current_value}T</div><div class="stat-sub">Total Global M2</div></div><div class="stat"><div class="stat-val ${d.total.yoy_pct>=0?'up':'dn'}">${d.total.yoy_pct>=0?'+':''}${d.total.yoy_pct}%</div><div class="stat-sub">YoY</div></div>`;}else{sh.innerHTML=Object.values(d.countries).map(c=>`<div class="stat"><div class="stat-flag">${c.flag}</div><div class="stat-chg ${c.yoy_pct>=0?'up':'dn'}">${c.yoy_pct>=0?'+':''}${c.yoy_pct}%</div><div class="stat-sub">${c.name}</div></div>`).join('');}const ctx=document.getElementById('m2Chart').getContext('2d');if(charts.m2)charts.m2.destroy();if(m2Mode==='total'){const f=filterByPeriod(d.total.dates,d.total.values,m2Period);charts.m2=new Chart(ctx,{type:'line',data:{labels:f.dates,datasets:[{data:f.values,borderColor:COLORS.cyan,backgroundColor:hexToRGBA(COLORS.cyan,0.08),fill:true,tension:0.3}]},options:{scales:{x:baseScaleOpts,y:{...baseScaleOpts,ticks:{...baseScaleOpts.ticks,callback:v=>'$'+v+'T'}}}}});}else{const f=filterMultiByPeriod(d.country_dates,d.country_series,m2Period);var availKeys=Object.keys(f.series).filter(k=>d.countries[k]);charts.m2=new Chart(ctx,{type:'line',data:{labels:f.dates,datasets:availKeys.map(k=>({label:d.countries[k].name,data:f.series[k],borderColor:COLORS[k],tension:0.3}))},options:{plugins:{legend:{display:true,labels:{boxWidth:10,padding:12,font:{size:10},color:'#6e6e88'}}},scales:{x:baseScaleOpts,y:{...baseScaleOpts,ticks:{...baseScaleOpts.ticks,callback:v=>v.toFixed(1)+'%'}}}},plugins:[{id:'zeroLineM2',afterDraw(chart){const y=chart.scales.y.getPixelForValue(0);if(y>=chart.chartArea.top&&y<=chart.chartArea.bottom){const ctx=chart.ctx;ctx.save();ctx.strokeStyle='rgba(255,255,255,0.12)';ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(chart.chartArea.left,y);ctx.lineTo(chart.chartArea.right,y);ctx.stroke();ctx.restore();}}}]});}}
+/* ─── Ticker Map: data/ticker_map.json에서 로드 + 폴백 ─── */
+let TICKERS = {};
+const TICKER_FALLBACK = {
+  /* ── US 개별주 ── */
+  'US0378331005':'AAPL','US5949181045':'MSFT','US0231351067':'AMZN','US02079K3059':'GOOGL',
+  'US02079K1079':'GOOG','US88160R1014':'TSLA','US67066G1040':'NVDA','US30303M1027':'META',
+  'US4581401001':'INTC','US09075V1026':'AVGO','US5951121038':'MU','US64110L1061':'NFLX',
+  'US79466L3024':'CRM','US00724F1012':'ADBE','US0846707026':'BRK.B','US2546871060':'DIS',
+  'US91324P1021':'UNH','US5324571083':'LLY','US7427181091':'PG','US4370761029':'HD',
+  'US1101221083':'BMY','US8725901040':'TMUS','US0530151036':'ADP','US6541061031':'NKE',
+  'US46625H1005':'JPM','US68389X1054':'ORCL','US30231G1022':'XOM','US8740391003':'TSM',
+  'US46222L1089':'IONQ','US67079K1007':'SMR','US03823U1025':'AAOI','US3463751087':'FORM',
+  'US1725731079':'CRCL','US19247G1076':'IIVI','US9311421039':'WMT','US22160K1051':'COST',
+  'US80004C2008':'SNDK','US19260Q1076':'COIN','US53983B1094':'LMT','US0605051046':'BAC',
+  'US17275R1023':'CSCO','US92826C8394':'V','US5801351017':'MCD','US4698141078':'JNPR',
+  'US7134481081':'PEP','US0258161092':'AMD','US94106L1098':'WASTE','US58933Y1055':'MRK',
+  'US0394831020':'ANET','US70450Y1038':'PYPL','US8552441094':'SBUX','US4824801009':'KO',
+  'US20825C1045':'COP','US26856L1035':'ABNB','US6819191064':'ON','US1273871087':'CACC',
+  'US0090661010':'ABNB','US86800U1043':'SOUN','US45168D1046':'IBKR','US98956P1021':'ZION',
+  'US7170811035':'PFIZER','US4523081093':'IFF','US44107P1049':'HOOD','US29786A1060':'ETSY',
+  'US8636671013':'STZ','US2358511028':'DASH','US5128071082':'LRCX','US0382221051':'AMAT',
+  'US6974351057':'PLTR','US0200021014':'ALL','US78409V1044':'SPY',
+  /* ── US ETF (레버리지/인버스/섹터) ── */
+  'US4613886492':'QQQ','US74347X8314':'TQQQ','US74347R2067':'QLD','US8085247976':'SCHD',
+  'US46654Q2030':'JEPQ','US9229083632':'VOO','US74347W3630':'AGQ','US4642872349':'SLV',
+  'US25461A3876':'MSOX','US25461A4482':'PLTU','US25460G2865':'TSLL',
+  'US92864M7983':'ETHU','US4642867729':'EWY','CA85207K1075':'PSLV',
+  'US25459W4583':'SOXL','US25459W2169':'SOXS','US38747R8271':'NVDL',
+  'US81369Y5069':'XLE','US81369Y8030':'XLF','US81369Y6067':'XLK','US81369Y7059':'XLV',
+  'US92189H3003':'EMLC','US92189F1066':'VWO','US9220428745':'VTI',
+  'US92864M3016':'BITX','US09075V3087':'BITO','US46138G6492':'IWM',
+  'US74347G4322':'SQQQ','US33939L8826':'ARKK','US46090E1038':'IBIT',
+  'US74340W8663':'UVXY','US74347B3832':'SH','US25460E1055':'DFEN',
+  'US74347B6462':'SPXU','US74347B6389':'SPXS','US46138E7435':'JEPI',
+  'US74347G7970':'UPRO','US26922A8421':'MCHI','US92189F4060':'VEA',
+  'US78464A6982':'SPY','US46090E3027':'IEMG','US25460G5069':'LABU',
+  'US92204A7028':'VXUS','US46434V6213':'IVV','US4642882819':'EEM',
+  'US78468R6633':'DIA','US33939L1089':'ARKW','US46137V1571':'INDA',
+  'US26922A2135':'EFA','US97717W8490':'BOTZ','US37954Y4834':'GDX',
+  'US46434V7476':'AGG','US92206C4051':'VCIT','US74347B5571':'TLT',
+  /* ── 홍콩 ── */
+  'HK0000069689':'0700.HK','HK0941009539':'0941.HK','HK0700880927':'9988.HK',
+  'HK0388045442':'0388.HK','HK0005004626':'0005.HK','HK0992009065':'1211.HK',
+  'HK0175920316':'0175.HK','HK2840017924':'2840.HK',
+  /* ── 일본 ── */
+  'JP3633400001':'7203.T','JP3435000009':'6758.T','JP3756600007':'7974.T',
+  'JP3902900004':'9984.T','JP3371200001':'6861.T','JP3802400006':'6954.T',
+  'JP3802300008':'8306.T',
+  /* ── 중국 ── */
+  'CNE100000296':'600519.SS','CNE0000018R8':'300750.SZ','CNE100003662':'002594.SZ',
+  'CNE000001F70':'600031.SS',
+};
+async function loadTickerMap(){
+  try {
+    const r = await fetch('data/ticker_map.json');
+    if(r.ok){ TICKERS = await r.json(); console.log('[OK] ticker_map.json loaded'); }
+    else throw new Error('not found');
+  } catch(e){
+    TICKERS = TICKER_FALLBACK;
+    console.log('[INFO] Using fallback ticker map');
+  }
+}
+function getTicker(isin){ return TICKERS[isin] || TICKER_FALLBACK[isin] || ''; }
+const fmtS = n => {
+  const a = Math.abs(n);
+  if(a>=1e9) return (n/1e9).toFixed(1)+'B';
+  if(a>=1e6) return (n/1e6).toFixed(1)+'M';
+  if(a>=1e3) return (n/1e3).toFixed(0)+'K';
+  return n.toLocaleString();
+};
+const fmtF = n => n.toLocaleString('en-US');
 
-/* ===== 2. FED BALANCE SHEET (원본 그대로) ===== */
-let fedData,fedPeriod='5y';
-async function initFed(){fedData=await loadJSON('fed_balance_sheet.json');renderFed();setupTabs('fedTabs',p=>{fedPeriod=p;renderFed();});}
-function renderFed(){const d=fedData;document.getElementById('fedStats').innerHTML=`<div class="stat"><div class="stat-val" style="color:var(--blue);font-family:'Bebas Neue',sans-serif;font-size:32px;">$${d.current_value}T</div><div class="stat-sub">Total Assets</div></div><div class="stat"><div class="stat-chg ${d.weekly_change>=0?'up':'dn'}">${d.weekly_change>=0?'+':''}$${(d.weekly_change*1000).toFixed(0)}B/wk</div><div class="stat-sub">주간 변동</div></div>`;const f=filterByPeriod(d.dates,d.values,fedPeriod);const ctx=document.getElementById('fedChart').getContext('2d');if(charts.fed)charts.fed.destroy();charts.fed=new Chart(ctx,{type:'line',data:{labels:f.dates,datasets:[{data:f.values,borderColor:COLORS.blue,backgroundColor:hexToRGBA(COLORS.blue,0.08),fill:true,tension:0.3}]},options:{scales:{x:baseScaleOpts,y:{...baseScaleOpts,ticks:{...baseScaleOpts.ticks,callback:v=>'$'+v+'T'}}}}});}
+/* ─── Data ─── */
+function cur(){ return DATA?.current?.[period]?.[country] || []; }
+function prv(){ return DATA?.previous?.[period]?.[country] || []; }
 
-/* ===== 3. YIELD CURVE (원본 그대로) ===== */
-async function initYC(){const d=await loadJSON('yield_curve.json');const ctx=document.getElementById('ycChart').getContext('2d');charts.yc=new Chart(ctx,{type:'line',data:{labels:d.current.maturities,datasets:[{label:'현재',data:d.current.rates,borderColor:COLORS.orange,backgroundColor:hexToRGBA(COLORS.orange,0.06),fill:true,tension:0.3,pointRadius:4,pointHoverRadius:6,pointBackgroundColor:COLORS.orange},{label:'1년 전',data:d.one_year_ago.rates,borderColor:hexToRGBA(COLORS.purple,0.4),borderDash:[6,4],tension:0.3,pointRadius:0}]},options:{scales:{x:{...baseScaleOpts,ticks:{...baseScaleOpts.ticks,maxTicksLimit:11}},y:{...baseScaleOpts,ticks:{...baseScaleOpts.ticks,callback:v=>v.toFixed(1)+'%'}}}}});const sp=d.spreads;const statusClass=s=>s==='INVERTED'?'badge-red':s==='FLAT'?'badge-yellow':'badge-green';const statusKr=s=>s==='INVERTED'?'역전':s==='FLAT'?'플랫':'정상';document.getElementById('ycSpreads').innerHTML=`<div class="spread-item"><div class="spread-val" style="color:var(--orange)">${sp['2s10s']>=0?'+':''}${(sp['2s10s']*100).toFixed(0)}bp</div><div class="spread-name">2s10s</div></div><div class="spread-item"><div class="spread-val" style="color:var(--purple)">${sp['3m10y']>=0?'+':''}${(sp['3m10y']*100).toFixed(0)}bp</div><div class="spread-name">3m10y</div></div><span class="badge ${statusClass(sp['2s10s_status'])}">${statusKr(sp['2s10s_status'])}</span>`;}
+function diff(){
+  const c = cur(), p = prv();
+  const pm = {}; p.forEach(i => pm[i.isin] = i);
+  const cm = {}; c.forEach(i => cm[i.isin] = i);
+  const ne=[], rc=[];
+  c.forEach(i => {
+    const pv = pm[i.isin];
+    if(!pv) ne.push({...i, change:'new'});
+    else {
+      const rd = +pv.rank - +i.rank;
+      const ad = i.net_buy_amount - pv.net_buy_amount;
+      rc.push({...i, rd, ad, pr: +pv.rank});
+    }
+  });
+  const ex = []; p.forEach(i => { if(!cm[i.isin]) ex.push({...i, change:'exit'}); });
+  const up = rc.filter(r=>r.rd>=5).sort((a,b)=>b.rd-a.rd).slice(0,5);
+  const dn = rc.filter(r=>r.rd<=-5).sort((a,b)=>a.rd-b.rd).slice(0,5);
+  return {ne, ex, rc, up, dn};
+}
 
-/* ===== 4. NFCI (원본 그대로) ===== */
-let nfciData,nfciPeriod='3y';
-async function initNFCI(){nfciData=await loadJSON('nfci.json');renderNFCI();setupTabs('nfciTabs',p=>{nfciPeriod=p;renderNFCI();});}
-function renderNFCI(){const d=nfciData;const isLoose=d.current_value<0;document.getElementById('nfciStats').innerHTML=`<div class="stat"><div class="stat-val" style="color:var(--${isLoose?'green':'red'});font-family:'Bebas Neue',sans-serif;font-size:32px;">${d.current_value}</div><div class="stat-sub">NFCI Index</div></div><div class="stat"><span class="badge ${isLoose?'badge-green':'badge-red'}">${d.status}</span><div class="stat-sub" style="margin-top:4px">0 이상=긴축 / 이하=완화</div></div>`;const f=filterByPeriod(d.dates,d.values,nfciPeriod);const ctx=document.getElementById('nfciChart').getContext('2d');if(charts.nfci)charts.nfci.destroy();charts.nfci=new Chart(ctx,{type:'line',data:{labels:f.dates,datasets:[{data:f.values,borderColor:f.values.map(v=>v>=0?COLORS.red:COLORS.green),segment:{borderColor:ctx2=>{const v=ctx2.p1.parsed.y;return v>=0?COLORS.red:COLORS.green;}},tension:0.3,fill:false}]},options:{scales:{x:baseScaleOpts,y:{...baseScaleOpts}}},plugins:[{id:'zeroLine',afterDraw(chart){const y=chart.scales.y.getPixelForValue(0);const ctx=chart.ctx;ctx.save();ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(chart.chartArea.left,y);ctx.lineTo(chart.chartArea.right,y);ctx.stroke();ctx.restore();ctx.fillStyle='rgba(66,255,140,0.4)';ctx.font='9px JetBrains Mono';ctx.fillText('완화',chart.chartArea.right-24,y+12);ctx.fillStyle='rgba(255,74,106,0.4)';ctx.fillText('긴축',chart.chartArea.right-24,y-6);}}]});const interp=document.getElementById('nfciInterp');if(isLoose){interp.className='interp interp-green';interp.innerHTML=`<strong>현재: 완화적 환경 (${d.current_value})</strong> — 유동성이 풍부하고 시장 스트레스가 낮은 상태`;}else{interp.className='interp interp-red';interp.innerHTML=`<strong>현재: 긴축적 환경 (${d.current_value})</strong> — 금융환경이 타이트하고 시장에 압력이 있는 상태`;}}
+/* ─── Render ─── */
+function hlItem(fl, nm, dt, clr){
+  return `<div class="hl-item"><span class="fl">${fl}</span><span class="nm">${nm}</span><span class="dt" style="color:var(--${clr})">${dt}</span></div>`;
+}
 
-/* ===== INIT ===== */
-async function init(){try{await Promise.all([initM2(),initFed(),initYC(),initNFCI()]);injectShareBars();document.getElementById('lastUpdate').textContent=new Date().toLocaleDateString('ko-KR');}catch(e){console.error('Dashboard init error:',e);}sendHeight();window.addEventListener('resize',sendHeight);new MutationObserver(sendHeight).observe(document.body,{childList:true,subtree:true});}
+function render(){
+  if(!DATA) return;
+  const d = diff();
+
+  // Summary
+  document.getElementById('sNew').textContent = d.ne.length;
+  document.getElementById('sExit').textContent = d.ex.length;
+  document.getElementById('sUp').textContent = d.up.length;
+  document.getElementById('sDn').textContent = d.dn.length;
+
+  // Highlights
+  const $n = document.getElementById('hlNew');
+  $n.innerHTML = d.ne.length ? d.ne.map(i => hlItem(FLAGS[i.country]||'', i.name, `#${i.rank} · $${fmtS(i.net_buy_amount)}`, 'green')).join('') : '<div class="empty">변동 없음</div>';
+
+  const $e = document.getElementById('hlExit');
+  $e.innerHTML = d.ex.length ? d.ex.map(i => hlItem(FLAGS[i.country]||'', i.name, `이전 #${i.rank}`, 'red')).join('') : '<div class="empty">변동 없음</div>';
+
+  const $u = document.getElementById('hlUp');
+  $u.innerHTML = d.up.length ? d.up.map(i => hlItem(FLAGS[i.country]||'', i.name, `▲${i.rd} (#${i.pr}→#${i.rank})`, 'cyan')).join('') : '<div class="empty">변동 없음</div>';
+
+  const $d = document.getElementById('hlDn');
+  $d.innerHTML = d.dn.length ? d.dn.map(i => hlItem(FLAGS[i.country]||'', i.name, `▼${Math.abs(i.rd)} (#${i.pr}→#${i.rank})`, 'orange')).join('') : '<div class="empty">변동 없음</div>';
+
+  // Chart
+  renderChart(d);
+
+  // Table
+  renderTable(d);
+
+  // Update badge
+  const pLabel = period === '1W' ? '주간' : '월간';
+  document.getElementById('updateDate').textContent = `updated: ${DATA.updated_at} · ${pLabel} · ${country}`;
+}
+
+function renderChart(d){
+  const c = cur().slice(0, 30);
+  const pm = {}; prv().forEach(i => pm[i.isin] = i);
+
+  const labels = c.map(i => `#${i.rank} ${i.name.length>22?i.name.slice(0,22)+'…':i.name}`);
+  const vals = c.map(i => i.net_buy_amount);
+  const bg = c.map(i => {
+    const p = pm[i.isin];
+    if(!p) return 'rgba(0,230,118,.8)';
+    const rd = +p.rank - +i.rank;
+    if(rd>=5) return 'rgba(0,212,255,.8)';
+    if(rd<=-5) return 'rgba(255,145,0,.8)';
+    return 'rgba(0,212,255,.4)';
+  });
+  const bd = c.map(i => {
+    const p = pm[i.isin];
+    if(!p) return 'rgba(0,230,118,1)';
+    const rd = +p.rank - +i.rank;
+    if(rd>=5) return 'rgba(0,212,255,1)';
+    if(rd<=-5) return 'rgba(255,145,0,1)';
+    return 'rgba(0,212,255,.55)';
+  });
+
+  if(chart) chart.destroy();
+  chart = new Chart(document.getElementById('barChart').getContext('2d'), {
+    type:'bar',
+    data:{labels, datasets:[{data:vals, backgroundColor:bg, borderColor:bd, borderWidth:1, borderRadius:3, barThickness:18}]},
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'#1a1a1a', titleColor:'#e8e8e8', bodyColor:'#e8e8e8',
+          borderColor:'#333', borderWidth:1,
+          titleFont:{family:'Noto Sans KR',weight:'700'},
+          bodyFont:{family:'JetBrains Mono',size:12}, padding:12,
+          callbacks:{
+            title: t => c[t[0].dataIndex].name,
+            label: t => {
+              const i = c[t.dataIndex], p = pm[i.isin];
+              const l = [`순매수: $${fmtF(i.net_buy_amount)}`,`매수: $${fmtF(i.buy_amount)}`,`매도: $${fmtF(i.sell_amount)}`];
+              if(p){const rd=+p.rank-+i.rank; l.push(`순위변동: ${rd>0?'▲'+rd:rd<0?'▼'+Math.abs(rd):'-'}`);}
+              else l.push('🆕 신규 진입');
+              return l;
+            }
+          }
+        }
+      },
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#666',font:{family:'JetBrains Mono',size:10},callback:v=>'$'+fmtS(v)}},
+        y:{grid:{display:false},ticks:{color:'#aaa',font:{family:'Noto Sans KR',size:11},padding:4}}
+      }
+    }
+  });
+}
+
+function renderTable(d){
+  const c = cur(), pm = {};
+  prv().forEach(i => pm[i.isin] = i);
+
+  document.getElementById('tbody').innerHTML = c.map(i => {
+    const p = pm[i.isin];
+    let cb, ac;
+    if(!p){
+      cb = '<span class="bdg new">NEW</span>'; ac = '-';
+    } else {
+      const rd = +p.rank - +i.rank;
+      cb = rd>0 ? `<span class="bdg up">▲${rd}</span>` : rd<0 ? `<span class="bdg dn">▼${Math.abs(rd)}</span>` : '<span class="bdg eq">-</span>';
+      const nd = i.net_buy_amount - p.net_buy_amount;
+      const nc = nd>=0?'pos':'neg', ns = nd>=0?'+':'';
+      ac = `<span class="amt ${nc}">${ns}$${fmtS(nd)}</span>`;
+    }
+    return `<tr>
+      <td class="rk${+i.rank<=3?' t3':''}">${i.rank}</td>
+      <td class="chg">${cb}</td>
+      <td><span class="fl">${FLAGS[i.country]||''}</span></td>
+      <td class="sn">${i.name}</td>
+      <td class="ic" style="color:var(--cyan)">${getTicker(i.isin)}</td>
+      <td class="ic">${i.isin}</td>
+      <td class="amt">$${fmtF(i.buy_amount)}</td>
+      <td class="amt">$${fmtF(i.sell_amount)}</td>
+      <td class="amt pos">$${fmtF(i.net_buy_amount)}</td>
+      <td>${ac}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ─── Events ─── */
+document.querySelectorAll('#pTabs .tb').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('#pTabs .tb').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); period = b.dataset.p; render();
+}));
+document.querySelectorAll('#cTabs .tb').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('#cTabs .tb').forEach(x=>x.classList.remove('on-c'));
+  b.classList.add('on-c'); country = b.dataset.c; render();
+}));
+
+/* ─── Init ─── */
+async function init(){
+  try {
+    await loadTickerMap();
+    const r = await fetch('data/dashboard_data.json');
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    DATA = await r.json();
+    document.getElementById('loadingMsg').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    render();
+  } catch(e){
+    document.getElementById('loadingMsg').innerHTML =
+      `<span style="color:var(--red)">데이터 로딩 실패: ${e.message}</span><br><small style="color:var(--t3)">data/dashboard_data.json 파일을 확인해주세요</small>`;
+  }
+  sendHeight();
+  window.addEventListener('resize', sendHeight);
+  new MutationObserver(sendHeight).observe(document.body,{childList:true,subtree:true});
+}
+
+/* ─── iframe 높이 동기화 ─── */
 var _lastH=0,_ht;
 function sendHeight(){clearTimeout(_ht);_ht=setTimeout(function(){var h=document.body.offsetHeight;if(Math.abs(h-_lastH)>5){_lastH=h;window.parent.postMessage({type:'resize',height:h},'*');}},150);}
 window.addEventListener('message',function(e){if(e.data&&e.data.type==='requestResize'){_lastH=0;sendHeight();}});
-init();
+
+document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>
