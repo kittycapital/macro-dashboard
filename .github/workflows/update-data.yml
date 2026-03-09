@@ -3,7 +3,7 @@ name: 📊 매크로 대시보드 데이터 업데이트
 on:
   schedule:
     # 매일 한국시간 07:00 (UTC 22:00 전날)
-    - cron: '0 22 * * *'
+    - cron: '0 22 * * 0-4'  # 평일만 (Sun-Thu UTC = Mon-Fri KST)
   workflow_dispatch:  # 수동 실행 가능
 
 permissions:
