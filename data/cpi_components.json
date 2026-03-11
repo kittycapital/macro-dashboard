@@ -1,6 +1,6 @@
 {
-  "last_updated": "2026-03-10",
-  "latest_date": "2026-01",
+  "last_updated": "2026-03-11",
+  "latest_date": "2026-02",
   "dates": [
     "2019-01",
     "2019-02",
@@ -85,13 +85,14 @@
     "2025-09",
     "2025-11",
     "2025-12",
-    "2026-01"
+    "2026-01",
+    "2026-02"
   ],
   "components": [
     {
       "name": "Shelter",
       "current": 3.0,
-      "prev_change": -0.2,
+      "prev_change": 0.0,
       "series": [
         3.2,
         3.4,
@@ -176,13 +177,14 @@
         3.6,
         3.0,
         3.2,
+        3.0,
         3.0
       ]
     },
     {
       "name": "Energy",
-      "current": -0.3,
-      "prev_change": -2.4,
+      "current": 0.4,
+      "prev_change": 0.7,
       "series": [
         -5.8,
         -5.4,
@@ -267,13 +269,14 @@
         2.9,
         4.2,
         2.1,
-        -0.3
+        -0.3,
+        0.4
       ]
     },
     {
       "name": "Food",
-      "current": 2.9,
-      "prev_change": -0.1,
+      "current": 3.1,
+      "prev_change": 0.2,
       "series": [
         1.6,
         2.0,
@@ -358,13 +361,14 @@
         3.1,
         2.6,
         3.0,
-        2.9
+        2.9,
+        3.1
       ]
     },
     {
       "name": "Transport",
-      "current": -1.0,
-      "prev_change": -1.2,
+      "current": -0.5,
+      "prev_change": 0.5,
       "series": [
         -1.6,
         -1.4,
@@ -449,13 +453,14 @@
         1.8,
         1.4,
         0.2,
-        -1.0
+        -1.0,
+        -0.5
       ]
     },
     {
       "name": "Medical",
-      "current": 3.2,
-      "prev_change": 0.0,
+      "current": 3.4,
+      "prev_change": 0.2,
       "series": [
         1.9,
         1.8,
@@ -540,13 +545,14 @@
         3.3,
         2.9,
         3.2,
-        3.2
+        3.2,
+        3.4
       ]
     },
     {
       "name": "Apparel",
-      "current": 1.8,
-      "prev_change": 1.2,
+      "current": 2.5,
+      "prev_change": 0.7,
       "series": [
         -0.3,
         -1.0,
@@ -631,13 +637,14 @@
         -0.1,
         0.1,
         0.6,
-        1.8
+        1.8,
+        2.5
       ]
     },
     {
       "name": "Education",
-      "current": 0.5,
-      "prev_change": 0.0,
+      "current": 0.1,
+      "prev_change": -0.4,
       "series": [
         0.3,
         0.6,
@@ -722,7 +729,8 @@
         0.4,
         1.4,
         0.5,
-        0.5
+        0.5,
+        0.1
       ]
     }
   ]
