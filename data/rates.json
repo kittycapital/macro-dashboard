@@ -1,12 +1,12 @@
 {
-  "last_updated": "2026-09-30",
+  "last_updated": "2026-10-01",
   "countries": {
     "us": {
       "name": "미국",
       "flag": "🇺🇸",
       "bank": "Fed",
-      "current": 3.86,
-      "prev_change": 0.11
+      "current": 3.87,
+      "prev_change": 0.12
     },
     "kr": {
       "name": "한국",
@@ -19,8 +19,8 @@
       "name": "유로존",
       "flag": "🇪🇺",
       "bank": "ECB",
-      "current": 2.52,
-      "prev_change": 0.12
+      "current": 2.53,
+      "prev_change": 0.13
     },
     "jp": {
       "name": "일본",
@@ -682,7 +682,7 @@
       3.75,
       3.75,
       3.75,
-      3.86
+      3.87
     ],
     "kr": [
       4.76,
@@ -1328,7 +1328,7 @@
       2.27,
       2.4,
       2.4,
-      2.52
+      2.53
     ],
     "jp": [
       0.02,
