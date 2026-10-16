@@ -1,13 +1,13 @@
 {
-  "last_updated": "2026-10-15",
+  "last_updated": "2026-10-16",
   "latest_date": "2026-08",
   "headline": {
     "current": 9.9,
     "prev_change": 1.2
   },
   "core": {
-    "current": 4.6,
-    "prev_change": 0.3
+    "current": 4.8,
+    "prev_change": 0.4
   },
   "dates": [
     "2011-04",
@@ -568,8 +568,8 @@
       4.9,
       4.5,
       4.8,
-      4.3,
-      4.6
+      4.4,
+      4.8
     ]
   }
 }
