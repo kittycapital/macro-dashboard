@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-10-18",
+  "last_updated": "2026-10-20",
   "countries": {
     "us": {
       "name": "미국",
@@ -19,8 +19,8 @@
       "name": "유로존",
       "flag": "🇪🇺",
       "bank": "ECB",
-      "current": 2.53,
-      "prev_change": 0.13
+      "current": 2.65,
+      "prev_change": 0.12
     },
     "jp": {
       "name": "일본",
@@ -1332,7 +1332,7 @@
       2.4,
       2.4,
       2.53,
-      2.53
+      2.65
     ],
     "jp": [
       0.02,
